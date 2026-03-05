@@ -23,7 +23,8 @@ if ( ! function_exists( 'wp_get_chrome_major_version' ) && ! function_exists( 'g
 	 * @return int|null Chrome major version or null if not Chrome.
 	 */
 	function wp_get_chrome_major_version() {
-		if ( isset( $_SERVER['HTTP_USER_AGENT'] ) && preg_match( '/Chrome\/(\d+)/', $_SERVER['HTTP_USER_AGENT'], $matches ) ) {
+		$user_agent = isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '';
+		if ( preg_match( '/Chrome\/(\d+)/', $user_agent, $matches ) ) {
 			return (int) $matches[1];
 		}
 		return null;

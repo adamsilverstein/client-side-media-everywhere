@@ -141,19 +141,31 @@ test.describe( 'Cross-Origin Isolation', () => {
 		await admin.createNewPost();
 
 		// Inject a plain iframe and let the MutationObserver add credentialless.
-		const hasCredentialless = await page.evaluate( () => {
-			return new Promise< boolean >( ( resolve ) => {
-				const iframe = document.createElement( 'iframe' );
-				iframe.src = 'about:blank';
-				document.body.appendChild( iframe );
-
-				// Give the MutationObserver time to process.
-				setTimeout( () => {
-					resolve( iframe.hasAttribute( 'credentialless' ) );
-				}, 1000 );
-			} );
+		await page.evaluate( () => {
+			const iframe = document.createElement( 'iframe' );
+			iframe.src = 'about:blank';
+			document.body.appendChild( iframe );
 		} );
 
-		expect( hasCredentialless ).toBe( true );
+		// Wait for the MutationObserver to add the credentialless attribute.
+		await page.waitForFunction(
+			() => {
+				const iframes =
+					document.querySelectorAll( 'iframe[src="about:blank"]' );
+				const lastIframe = iframes[ iframes.length - 1 ];
+				return lastIframe && lastIframe.hasAttribute( 'credentialless' );
+			},
+			{ timeout: 5000 }
+		);
+
+		// Re-query the attribute to verify.
+		const result = await page.evaluate( () => {
+			const iframes =
+				document.querySelectorAll( 'iframe[src="about:blank"]' );
+			const lastIframe = iframes[ iframes.length - 1 ];
+			return lastIframe ? lastIframe.hasAttribute( 'credentialless' ) : false;
+		} );
+
+		expect( result ).toBe( true );
 	} );
 } );
