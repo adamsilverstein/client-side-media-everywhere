@@ -12,6 +12,8 @@ composer.lock
 dist
 node_modules
 phpcs.xml.dist
+phpstan-bootstrap.php
+phpstan.neon.dist
 phpunit.xml.dist
 README.md
 tests

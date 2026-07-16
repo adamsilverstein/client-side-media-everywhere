@@ -158,7 +158,7 @@ function csme_add_crossorigin_to_images( $html ) {
 
 	$processor = new WP_HTML_Tag_Processor( $html );
 
-	while ( $processor->next_tag( 'IMG' ) ) {
+	while ( $processor->next_tag( array( 'tag_name' => 'IMG' ) ) ) {
 		if ( null !== $processor->get_attribute( 'crossorigin' ) ) {
 			continue;
 		}

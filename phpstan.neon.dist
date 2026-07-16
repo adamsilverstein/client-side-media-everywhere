@@ -1,0 +1,13 @@
+# PHPStan configuration.
+#
+# WordPress core stubs and dynamic return type extensions are provided by
+# szepeviktor/phpstan-wordpress, auto-registered via phpstan/extension-installer.
+parameters:
+	level: 5
+	phpVersion: 70400
+	paths:
+		- client-side-media-experiments.php
+		- uninstall.php
+		- includes/
+	bootstrapFiles:
+		- phpstan-bootstrap.php
