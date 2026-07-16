@@ -3,7 +3,7 @@ Contributors: adamsilverstein
 Tags: media, performance, cross-origin, wasm
 Requires at least: 6.8
 Tested up to: 7.1
-Stable tag: 0.2.0
+Stable tag: 1.0.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -33,6 +33,7 @@ WordPress 7.1 handles HEIC/HEIF uploads in core, including client-side conversio
 
 * WordPress 6.8+ with the Gutenberg plugin (which provides the client-side media processing feature), or WordPress 7.1+.
 * The client-side media processing feature must be enabled (it is on by default in secure contexts).
+* HTTPS (or localhost): client-side media processing requires a secure context.
 
 == Installation ==
 
@@ -41,6 +42,10 @@ WordPress 7.1 handles HEIC/HEIF uploads in core, including client-side conversio
 3. The plugin activates automatically on browsers that need COEP/COOP headers.
 
 == Frequently Asked Questions ==
+
+= Why is media still processed server-side? =
+
+Check that your site is served over HTTPS (or localhost). Client-side media processing requires a secure context; without one, cross-origin isolation is unavailable and WordPress silently falls back to server-side processing. The editor logs an informational message in the browser console explaining the reason for the fallback.
 
 = Do I need this plugin on Chrome? =
 
@@ -62,11 +67,14 @@ WordPress 7.1 converts HEIC images client-side where possible and server-side ot
 
 == Changelog ==
 
-= Unreleased =
+= 1.0.0 =
+* First stable release, fully compatible with the WordPress 7.1 client-side media processing feature.
 * Removed the HEIC conversion module (heic2any/CDN): WordPress 7.1 handles HEIC uploads in core.
 * Fixed Chromium detection against WordPress 7.1 function names, so no COEP/COOP headers are sent where DIP applies.
 * Deferred initialization to `plugins_loaded` so plugin activation order no longer matters.
 * The `csme_enabled` setting default no longer depends on the browser saving the settings.
+* Scoped the `__coepCoopIsolation` flag to block editor screens instead of every admin page.
+* Added an uninstall handler that removes the plugin option on deletion.
 
 = 0.2.0 =
 * Added optional HEIC/HEIF upload support with client-side conversion to JPEG.

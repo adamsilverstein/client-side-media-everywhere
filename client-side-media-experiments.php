@@ -3,7 +3,7 @@
  * Plugin Name: Client-Side Media Experiments
  * Plugin URI:  https://github.com/adamsilverstein/client-side-media-experiments
  * Description: Enables client-side media processing on Firefox and Safari via COEP/COOP cross-origin isolation headers.
- * Version:     0.2.0
+ * Version:     1.0.0
  * Requires at least: 6.8
  * Requires PHP: 7.4
  * Author:      Adam Silverstein
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'CSME_VERSION', '0.2.0' );
+define( 'CSME_VERSION', '1.0.0' );
 define( 'CSME_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'CSME_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 

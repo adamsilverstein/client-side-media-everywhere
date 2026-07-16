@@ -25,6 +25,7 @@ WordPress 7.1 handles HEIC/HEIF uploads in core: MIME types, file type detection
 
 - WordPress 6.8+ with the Gutenberg plugin, or WordPress 7.1+.
 - The client-side media processing feature must be enabled (it is on by default in secure contexts).
+- A secure context: the site must be served over HTTPS (or from `localhost`). Cross-origin isolation and `SharedArrayBuffer` are unavailable otherwise, and the editor falls back to server-side processing.
 
 ## Installation
 
