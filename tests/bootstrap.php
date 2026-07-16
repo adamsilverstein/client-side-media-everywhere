@@ -36,7 +36,6 @@ require_once $_tests_dir . '/includes/functions.php';
  * The main plugin file has early-return guards, so we load the include directly.
  */
 function _manually_load_plugin() {
-	require_once CSME_PLUGIN_DIR . 'includes/settings.php';
 	require_once CSME_PLUGIN_DIR . 'includes/cross-origin-isolation.php';
 }
 

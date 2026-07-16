@@ -31,12 +31,28 @@ This plugin restores support by sending the older COEP/COOP headers on browsers 
 
 ## Configuration
 
-### Disable COEP/COOP headers
+The plugin has no settings screen: activating it is opting in to the COEP/COOP headers, and deactivating it turns them off.
 
-Navigate to **Settings → Media** and uncheck **Enable**, or programmatically:
+### Disable COEP/COOP headers programmatically
+
+To keep the plugin active but suppress the headers (for example, conditionally per environment or per user), use the `csme_use_coep_coop` filter:
 
 ```php
 add_filter( 'csme_use_coep_coop', '__return_false' );
+```
+
+The filter receives the computed default (`true` on browsers that need COEP/COOP, `false` where Document-Isolation-Policy applies), so it can also be used for conditional logic:
+
+```php
+add_filter(
+	'csme_use_coep_coop',
+	function ( $use_coep_coop ) {
+		if ( 'staging' === wp_get_environment_type() ) {
+			return false;
+		}
+		return $use_coep_coop;
+	}
+);
 ```
 
 ## Development

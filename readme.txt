@@ -53,7 +53,9 @@ The COEP/COOP headers are only sent on block editor admin pages, not on the fron
 
 = Can I disable the COEP/COOP behavior? =
 
-Yes. Uncheck **Enable** under Settings > Media, or use the `csme_use_coep_coop` filter:
+Yes - deactivate the plugin. Sending the COEP/COOP headers is the plugin's only job, so there is no separate settings toggle: activating the plugin turns the behavior on, deactivating it turns it off.
+
+To keep the plugin active but suppress the headers programmatically (for example, per environment), use the `csme_use_coep_coop` filter:
 
 `add_filter( 'csme_use_coep_coop', '__return_false' );`
 
@@ -64,6 +66,7 @@ WordPress 7.1 converts HEIC images client-side where possible and server-side ot
 == Changelog ==
 
 = Unreleased =
+* Removed the settings screen and the `csme_enabled` option. Activating the plugin now always enables the COEP/COOP headers; deactivate the plugin to turn them off. Note: sites that had unchecked **Enable** under Settings > Media will have the headers re-enabled after updating. Use the `csme_use_coep_coop` filter to disable the behavior programmatically.
 * Added crossorigin="anonymous" to cross-origin images on Safari (require-corp), where they would otherwise be blocked by the embedder policy. Covers src and srcset, including protocol-relative URLs.
 
 = 1.0.0 =

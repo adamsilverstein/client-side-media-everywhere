@@ -44,7 +44,6 @@ function csme_init() {
 		return;
 	}
 
-	require_once CSME_PLUGIN_DIR . 'includes/settings.php';
 	require_once CSME_PLUGIN_DIR . 'includes/cross-origin-isolation.php';
 }
 add_action( 'plugins_loaded', 'csme_init' );
