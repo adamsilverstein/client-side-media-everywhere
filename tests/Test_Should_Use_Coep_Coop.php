@@ -2,7 +2,7 @@
 /**
  * Tests for csme_should_use_coep_coop().
  *
- * @package ClientSideMediaExperiments
+ * @package ClientSideMediaEverywhere
  */
 
 /**

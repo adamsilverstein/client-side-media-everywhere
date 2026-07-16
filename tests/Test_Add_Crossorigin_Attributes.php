@@ -2,7 +2,7 @@
 /**
  * Tests for csme_add_crossorigin_to_images().
  *
- * @package ClientSideMediaExperiments
+ * @package ClientSideMediaEverywhere
  */
 
 class Test_Add_Crossorigin_Attributes extends WP_UnitTestCase {

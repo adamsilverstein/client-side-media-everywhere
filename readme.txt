@@ -1,4 +1,4 @@
-=== Client-Side Media Experiments ===
+=== Client-Side Media Everywhere ===
 Contributors: adamsilverstein
 Tags: media, performance, cross-origin, wasm
 Requires at least: 6.8
@@ -33,7 +33,7 @@ This plugin restores support for Firefox and Safari by sending the older COEP/CO
 
 == Installation ==
 
-1. Upload the `client-side-media-experiments` folder to `/wp-content/plugins/`.
+1. Upload the `client-side-media-everywhere` folder to `/wp-content/plugins/`.
 2. Activate the plugin through the 'Plugins' menu in WordPress.
 3. The plugin activates automatically on browsers that need COEP/COOP headers.
 
@@ -66,6 +66,7 @@ WordPress 7.1 converts HEIC images client-side where possible and server-side ot
 == Changelog ==
 
 = Unreleased =
+* Renamed the plugin from "Client-Side Media Experiments" to "Client-Side Media Everywhere" to better describe what it does: bringing the WordPress client-side media processing feature to browsers that core does not cover.
 * Removed the settings screen and the `csme_enabled` option. Activating the plugin now always enables the COEP/COOP headers; deactivate the plugin to turn them off. Note: sites that had unchecked **Enable** under Settings > Media will have the headers re-enabled after updating. Use the `csme_use_coep_coop` filter to disable the behavior programmatically.
 * Added crossorigin="anonymous" to cross-origin images on Safari (require-corp), where they would otherwise be blocked by the embedder policy. Covers src and srcset, including protocol-relative URLs.
 

@@ -1,7 +1,7 @@
 <?php
 /**
- * Plugin Name: Client-Side Media Experiments
- * Plugin URI:  https://github.com/adamsilverstein/client-side-media-experiments
+ * Plugin Name: Client-Side Media Everywhere
+ * Plugin URI:  https://github.com/adamsilverstein/client-side-media-everywhere
  * Description: Enables client-side media processing on Firefox and Safari via COEP/COOP cross-origin isolation headers.
  * Version:     1.0.0
  * Requires at least: 6.8
@@ -10,9 +10,9 @@
  * Author URI:  https://developer.wordpress.org
  * License:     GPL-2.0-or-later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain: client-side-media-experiments
+ * Text Domain: client-side-media-everywhere
  *
- * @package ClientSideMediaExperiments
+ * @package ClientSideMediaEverywhere
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

@@ -6,7 +6,7 @@
  * do not support Document-Isolation-Policy (Firefox, Safari, and
  * Chrome < 137).
  *
- * @package ClientSideMediaExperiments
+ * @package ClientSideMediaEverywhere
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

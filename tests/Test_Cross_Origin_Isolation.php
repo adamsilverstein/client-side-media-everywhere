@@ -2,7 +2,7 @@
 /**
  * Tests for csme_set_up_cross_origin_isolation() guard checks.
  *
- * @package ClientSideMediaExperiments
+ * @package ClientSideMediaEverywhere
  */
 
 class Test_Cross_Origin_Isolation extends WP_UnitTestCase {

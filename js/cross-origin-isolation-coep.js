@@ -211,7 +211,7 @@
 
 		wp.hooks.addFilter(
 			'editor.BlockEdit',
-			'client-side-media-experiments/disable-embed-previews',
+			'client-side-media-everywhere/disable-embed-previews',
 			disableEmbedPreviews
 		);
 	}

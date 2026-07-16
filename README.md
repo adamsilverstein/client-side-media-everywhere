@@ -1,4 +1,4 @@
-# Client-Side Media Experiments
+# Client-Side Media Everywhere
 
 Enables client-side media processing on Firefox and Safari via COEP/COOP cross-origin isolation headers.
 
@@ -25,7 +25,7 @@ This plugin restores support by sending the older COEP/COOP headers on browsers 
 
 ## Installation
 
-1. Upload the `client-side-media-experiments` folder to `/wp-content/plugins/`.
+1. Upload the `client-side-media-everywhere` folder to `/wp-content/plugins/`.
 2. Activate the plugin through the **Plugins** menu in WordPress.
 3. The COEP/COOP headers activate automatically on browsers that need them.
 
@@ -82,7 +82,7 @@ To package the plugin for the WordPress.org plugin repository (or manual install
 composer build
 ```
 
-This produces `dist/client-side-media-experiments.zip` containing only the runtime files, with a single top-level `client-side-media-experiments/` directory as required by WordPress.org. Development files are excluded per `.distignore` - the same exclusion list used by the release deploy workflow.
+This produces `dist/client-side-media-everywhere.zip` containing only the runtime files, with a single top-level `client-side-media-everywhere/` directory as required by WordPress.org. Development files are excluded per `.distignore` - the same exclusion list used by the release deploy workflow.
 
 ## License
 

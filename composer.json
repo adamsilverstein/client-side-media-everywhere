@@ -1,5 +1,5 @@
 {
-	"name": "adamsilverstein/client-side-media-experiments",
+	"name": "adamsilverstein/client-side-media-everywhere",
 	"description": "WordPress plugin enabling client-side media processing on Firefox and Safari via COEP/COOP headers.",
 	"type": "wordpress-plugin",
 	"license": "GPL-2.0-or-later",

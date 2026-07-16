@@ -2,7 +2,7 @@
 /**
  * Tests for csme_enqueue_scripts().
  *
- * @package ClientSideMediaExperiments
+ * @package ClientSideMediaEverywhere
  */
 
 class Test_Enqueue_Scripts extends WP_UnitTestCase {

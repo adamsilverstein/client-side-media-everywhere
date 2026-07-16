@@ -1,14 +1,14 @@
 <?php
 /**
- * PHPUnit bootstrap file for the Client-Side Media Experiments plugin.
+ * PHPUnit bootstrap file for the Client-Side Media Everywhere plugin.
  *
- * @package ClientSideMediaExperiments
+ * @package ClientSideMediaEverywhere
  */
 
 // Define plugin constants.
 define( 'CSME_VERSION', '0.2.0' );
 define( 'CSME_PLUGIN_DIR', dirname( __DIR__ ) . '/' );
-define( 'CSME_PLUGIN_URL', 'http://example.org/wp-content/plugins/client-side-media-experiments/' );
+define( 'CSME_PLUGIN_URL', 'http://example.org/wp-content/plugins/client-side-media-everywhere/' );
 
 // Stub the client-side media processing gate so the plugin file can load.
 function wp_is_client_side_media_processing_enabled() {

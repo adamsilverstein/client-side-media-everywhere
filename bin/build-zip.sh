@@ -4,11 +4,11 @@
 #
 # Copies runtime files (excluding everything listed in .distignore) into a
 # single top-level plugin directory and zips it up as
-# dist/client-side-media-experiments.zip.
+# dist/client-side-media-everywhere.zip.
 
 set -euo pipefail
 
-PLUGIN_SLUG="client-side-media-experiments"
+PLUGIN_SLUG="client-side-media-everywhere"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST_DIR="${ROOT_DIR}/dist"
 BUILD_DIR="${DIST_DIR}/${PLUGIN_SLUG}"

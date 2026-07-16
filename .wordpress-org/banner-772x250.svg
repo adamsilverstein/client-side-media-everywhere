@@ -108,7 +108,7 @@
   <!-- Text with shadow filter -->
   <g filter="url(#textShadow)">
     <text x="260" y="108" font-family="'DIN Alternate', 'Helvetica Neue', Arial, sans-serif" font-size="58" font-weight="700" fill="#f0f4f8" letter-spacing="-1">Client-Side Media</text>
-    <text x="260" y="168" font-family="'DIN Alternate', 'Helvetica Neue', Arial, sans-serif" font-size="58" font-weight="700" fill="#00b4e6" letter-spacing="-1">Experiments</text>
+    <text x="260" y="168" font-family="'DIN Alternate', 'Helvetica Neue', Arial, sans-serif" font-size="58" font-weight="700" fill="#00b4e6" letter-spacing="-1">Everywhere</text>
   </g>
 
   <!-- Decorative line with gradient-faded ends -->

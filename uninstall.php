@@ -1,10 +1,10 @@
 <?php
 /**
- * Uninstall handler for Client-Side Media Experiments.
+ * Uninstall handler for Client-Side Media Everywhere.
  *
  * Removes plugin options when the plugin is deleted.
  *
- * @package ClientSideMediaExperiments
+ * @package ClientSideMediaEverywhere
  */
 
 if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {

@@ -6,7 +6,7 @@
 	beStrictAboutTestsThatDoNotTestAnything="true"
 >
 	<testsuites>
-		<testsuite name="Client-Side Media Experiments">
+		<testsuite name="Client-Side Media Everywhere">
 			<directory suffix=".php">tests/</directory>
 			<exclude>tests/bootstrap.php</exclude>
 		</testsuite>
@@ -15,7 +15,7 @@
 	<source>
 		<include>
 			<directory suffix=".php">includes/</directory>
-			<file>client-side-media-experiments.php</file>
+			<file>client-side-media-everywhere.php</file>
 		</include>
 		<exclude>
 			<directory suffix=".php">vendor/</directory>

@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
-<ruleset name="Client-Side Media Experiments">
-	<description>Coding standards for the Client-Side Media Experiments plugin.</description>
+<ruleset name="Client-Side Media Everywhere">
+	<description>Coding standards for the Client-Side Media Everywhere plugin.</description>
 
 	<rule ref="WordPress-Core" />
 	<rule ref="WordPress-Extra" />
@@ -13,7 +13,7 @@
 	<rule ref="WordPress.WP.I18n">
 		<properties>
 			<property name="text_domain" type="array">
-				<element value="client-side-media-experiments"/>
+				<element value="client-side-media-everywhere"/>
 			</property>
 		</properties>
 	</rule>
@@ -29,7 +29,7 @@
 	</rule>
 
 	<!-- Files to scan. -->
-	<file>client-side-media-experiments.php</file>
+	<file>client-side-media-everywhere.php</file>
 	<file>includes/</file>
 
 	<!-- Exclude vendor directory. -->

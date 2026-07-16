@@ -2,7 +2,7 @@
 /**
  * Tests for csme_get_coep_mode().
  *
- * @package ClientSideMediaExperiments
+ * @package ClientSideMediaEverywhere
  */
 
 class Test_Coep_Mode extends WP_UnitTestCase {

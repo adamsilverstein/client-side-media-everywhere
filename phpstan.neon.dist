@@ -6,7 +6,7 @@ parameters:
 	level: 5
 	phpVersion: 70400
 	paths:
-		- client-side-media-experiments.php
+		- client-side-media-everywhere.php
 		- uninstall.php
 		- includes/
 	bootstrapFiles:

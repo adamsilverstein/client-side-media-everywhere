@@ -2,7 +2,7 @@
 /**
  * Tests for csme_start_coep_coop_output_buffer() header output.
  *
- * @package ClientSideMediaExperiments
+ * @package ClientSideMediaEverywhere
  */
 
 /**
