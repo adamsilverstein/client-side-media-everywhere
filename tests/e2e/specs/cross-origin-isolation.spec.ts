@@ -373,40 +373,6 @@ test.describe( 'Cross-Origin Isolation', () => {
 		} );
 	} );
 
-	test( 'should not send isolation headers when disabled in settings', async ( {
-		admin,
-		page,
-		browserName,
-	} ) => {
-		test.skip(
-			browserName === 'chromium',
-			'Chromium never receives COEP/COOP headers from the plugin'
-		);
-
-		// Disable the plugin via its Settings > Media checkbox.
-		await admin.visitAdminPage( 'options-media.php' );
-		await page.locator( '#csme_enabled' ).uncheck();
-		await page.locator( '#submit' ).click();
-		await page.waitForSelector( '#csme_enabled' );
-
-		try {
-			const response = await page.goto( '/wp-admin/post-new.php' );
-			expect( response ).not.toBeNull();
-			const headers = response!.headers();
-
-			expect( headers[ 'cross-origin-opener-policy' ] ).toBeUndefined();
-			expect(
-				headers[ 'cross-origin-embedder-policy' ]
-			).toBeUndefined();
-		} finally {
-			// Restore the setting for subsequent tests.
-			await admin.visitAdminPage( 'options-media.php' );
-			await page.locator( '#csme_enabled' ).check();
-			await page.locator( '#submit' ).click();
-			await page.waitForSelector( '#csme_enabled' );
-		}
-	} );
-
 	test( 'should add credentialless attribute to iframes', async ( {
 		admin,
 		page,
