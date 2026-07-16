@@ -41,6 +41,23 @@ add_filter( 'csme_use_coep_coop', '__return_false' );
 
 ## Development
 
+### Static analysis
+
+The PHP codebase is analyzed with [PHPStan](https://phpstan.org/) at level 5 (configured in `phpstan.neon.dist`). To run it locally:
+
+```bash
+composer install
+composer phpstan
+```
+
+PHPStan also runs in CI and fails the build on new errors. Fix reported issues with real type fixes (accurate docblocks, guards for `false`/`null` returns) rather than ignores - there is no baseline, and the goal is to keep it that way.
+
+### Coding standards
+
+```bash
+composer lint
+```
+
 ### Building a release zip
 
 To package the plugin for the WordPress.org plugin repository (or manual installation), run:
