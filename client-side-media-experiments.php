@@ -19,24 +19,33 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-// Bail if client-side media processing is not enabled.
-if ( function_exists( 'wp_is_client_side_media_processing_enabled' ) ) {
-	if ( ! wp_is_client_side_media_processing_enabled() ) {
-		return;
-	}
-} elseif ( function_exists( 'gutenberg_is_client_side_media_processing_enabled' ) ) {
-	if ( ! gutenberg_is_client_side_media_processing_enabled() ) {
-		return;
-	}
-} else {
-	// Neither core 7.0+ nor Gutenberg with the feature — nothing to do.
-	return;
-}
-
 define( 'CSME_VERSION', '0.2.0' );
 define( 'CSME_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'CSME_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
-require_once CSME_PLUGIN_DIR . 'includes/settings.php';
-require_once CSME_PLUGIN_DIR . 'includes/cross-origin-isolation.php';
-require_once CSME_PLUGIN_DIR . 'includes/heic-support.php';
+/**
+ * Initializes the plugin once all plugins are loaded.
+ *
+ * Deferred to plugins_loaded so the Gutenberg plugin's functions are
+ * available regardless of plugin load order.
+ */
+function csme_init() {
+	// Bail if client-side media processing is not enabled.
+	if ( function_exists( 'wp_is_client_side_media_processing_enabled' ) ) {
+		if ( ! wp_is_client_side_media_processing_enabled() ) {
+			return;
+		}
+	} elseif ( function_exists( 'gutenberg_is_client_side_media_processing_enabled' ) ) {
+		if ( ! gutenberg_is_client_side_media_processing_enabled() ) {
+			return;
+		}
+	} else {
+		// Neither core 7.1+ nor Gutenberg with the feature - nothing to do.
+		return;
+	}
+
+	require_once CSME_PLUGIN_DIR . 'includes/settings.php';
+	require_once CSME_PLUGIN_DIR . 'includes/cross-origin-isolation.php';
+	require_once CSME_PLUGIN_DIR . 'includes/heic-support.php';
+}
+add_action( 'plugins_loaded', 'csme_init' );
