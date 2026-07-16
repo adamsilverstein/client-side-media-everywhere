@@ -277,6 +277,136 @@ test.describe( 'Cross-Origin Isolation', () => {
 		expect( flag ).toBe( true );
 	} );
 
+	test( 'should expose the COEP mode to JavaScript', async ( {
+		admin,
+		page,
+		browserName,
+	} ) => {
+		await admin.createNewPost();
+
+		const coepMode = await page.evaluate( () => {
+			return ( window as Window & { __coepMode?: string } ).__coepMode;
+		} );
+
+		// Chromium uses DIP, so the COEP/COOP script (and flag) never loads.
+		const expected = {
+			chromium: undefined,
+			firefox: 'credentialless',
+			webkit: 'require-corp',
+		}[ browserName ];
+		expect( coepMode ).toBe( expected );
+	} );
+
+	test( 'should add crossorigin to dynamic images only under require-corp', async ( {
+		admin,
+		page,
+		browserName,
+	} ) => {
+		test.skip(
+			browserName === 'chromium',
+			'The COEP/COOP script does not load on Chromium'
+		);
+
+		await admin.createNewPost();
+
+		// Inject a cross-origin image and let the MutationObserver react.
+		await page.evaluate( () => {
+			const img = document.createElement( 'img' );
+			img.id = 'csme-test-img';
+			img.src = 'https://external.example.com/test.jpg';
+			document.body.appendChild( img );
+		} );
+
+		if ( browserName === 'webkit' ) {
+			/*
+			 * Under require-corp (Safari), cross-origin images need a CORS
+			 * request to load at all, so the attribute must be added.
+			 */
+			await page.waitForFunction( () => {
+				const img = document.getElementById( 'csme-test-img' );
+				return (
+					img &&
+					img.getAttribute( 'crossorigin' ) === 'anonymous'
+				);
+			} );
+		} else {
+			/*
+			 * Under credentialless (Firefox), forcing CORS mode would break
+			 * images from servers without CORS headers, so the observer must
+			 * leave images alone. Give it a moment to (not) react.
+			 */
+			await page.waitForTimeout( 1000 );
+			const crossorigin = await page.evaluate( () => {
+				const img = document.getElementById( 'csme-test-img' );
+				return img ? img.getAttribute( 'crossorigin' ) : 'missing';
+			} );
+			expect( crossorigin ).toBeNull();
+		}
+	} );
+
+	test( 'should add crossorigin to dynamic non-image media elements', async ( {
+		admin,
+		page,
+		browserName,
+	} ) => {
+		test.skip(
+			browserName === 'chromium',
+			'The COEP/COOP script does not load on Chromium'
+		);
+
+		await admin.createNewPost();
+
+		// Non-IMG elements get the attribute in both COEP modes.
+		await page.evaluate( () => {
+			const video = document.createElement( 'video' );
+			video.id = 'csme-test-video';
+			video.preload = 'none';
+			video.src = 'https://external.example.com/test.mp4';
+			document.body.appendChild( video );
+		} );
+
+		await page.waitForFunction( () => {
+			const video = document.getElementById( 'csme-test-video' );
+			return (
+				video && video.getAttribute( 'crossorigin' ) === 'anonymous'
+			);
+		} );
+	} );
+
+	test( 'should not send isolation headers when disabled in settings', async ( {
+		admin,
+		page,
+		browserName,
+	} ) => {
+		test.skip(
+			browserName === 'chromium',
+			'Chromium never receives COEP/COOP headers from the plugin'
+		);
+
+		// Disable the plugin via its Settings > Media checkbox.
+		await admin.visitAdminPage( 'options-media.php' );
+		await page.locator( '#csme_enabled' ).uncheck();
+		await page.locator( '#submit' ).click();
+		await page.waitForSelector( '#csme_enabled' );
+
+		try {
+			const response = await page.goto( '/wp-admin/post-new.php' );
+			expect( response ).not.toBeNull();
+			const headers = response!.headers();
+
+			expect( headers[ 'cross-origin-opener-policy' ] ).toBeUndefined();
+			expect(
+				headers[ 'cross-origin-embedder-policy' ]
+			).toBeUndefined();
+		} finally {
+			// Restore the setting for subsequent tests.
+			await admin.visitAdminPage( 'options-media.php' );
+			await page.locator( '#csme_enabled' ).check();
+			await page.locator( '#submit' ).click();
+			await page.waitForSelector( '#csme_enabled' );
+		}
+	} );
+
 	test( 'should add credentialless attribute to iframes', async ( {
 		admin,
 		page,
