@@ -10,19 +10,22 @@ if ( ! function_exists( 'wp_is_client_side_media_processing_enabled' ) ) {
 	 *
 	 * @return bool
 	 */
-	function wp_is_client_side_media_processing_enabled() {
+	function wp_is_client_side_media_processing_enabled() { // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Deliberate stub of the core function.
 		return true;
 	}
 }
 
-// Provide Chrome version detection if neither core nor Gutenberg has it.
-if ( ! function_exists( 'wp_get_chrome_major_version' ) && ! function_exists( 'gutenberg_get_chrome_major_version' ) ) {
+// Provide Chromium version detection if neither core (7.1+) nor Gutenberg has it.
+if ( ! function_exists( 'wp_get_chromium_major_version' ) && ! function_exists( 'gutenberg_get_chromium_major_version' ) ) {
 	/**
-	 * Stub: detect Chrome major version from the User-Agent header.
+	 * Stub: detect Chromium major version from the User-Agent header.
 	 *
-	 * @return int|null Chrome major version or null if not Chrome.
+	 * Mirrors core's wp_get_chromium_major_version() for environments
+	 * running a WordPress version that predates it.
+	 *
+	 * @return int|null Chromium major version or null if not a Chromium browser.
 	 */
-	function wp_get_chrome_major_version() {
+	function wp_get_chromium_major_version() { // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Deliberate stub of the core function.
 		$user_agent = isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '';
 		if ( preg_match( '/Chrome\/(\d+)/', $user_agent, $matches ) ) {
 			return (int) $matches[1];

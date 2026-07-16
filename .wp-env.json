@@ -1,8 +1,7 @@
 {
-	"core": null,
+	"core": "WordPress/WordPress#master",
 	"plugins": [
-		".",
-		"https://downloads.wordpress.org/plugin/gutenberg.latest-stable.zip"
+		"."
 	],
 	"mappings": {
 		"wp-content/mu-plugins": "./tests/e2e/mu-plugins"

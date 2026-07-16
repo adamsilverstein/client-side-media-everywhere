@@ -28,8 +28,10 @@ function csme_e2e_is_forcing_dip() {
 /**
  * Removes CSME cross-origin isolation hooks when DIP mode is forced.
  *
- * Runs on plugins_loaded so that the CSME plugin's hooks are already registered
- * and can be removed before the load-* admin actions fire.
+ * Runs on plugins_loaded at priority 20: the plugin registers its hooks
+ * inside csme_init() on plugins_loaded (default priority 10), and since
+ * mu-plugins load before regular plugins, a priority-10 callback here
+ * would run before those hooks exist and remove nothing.
  */
 function csme_e2e_remove_coep_coop_hooks() {
 	if ( ! csme_e2e_is_forcing_dip() ) {
@@ -44,7 +46,7 @@ function csme_e2e_remove_coep_coop_hooks() {
 	remove_action( 'admin_init', 'csme_set_js_flag' );
 	remove_action( 'admin_enqueue_scripts', 'csme_enqueue_scripts' );
 }
-add_action( 'plugins_loaded', 'csme_e2e_remove_coep_coop_hooks' );
+add_action( 'plugins_loaded', 'csme_e2e_remove_coep_coop_hooks', 20 );
 
 /**
  * Filters csme_use_coep_coop to disable COEP/COOP when DIP mode is forced.

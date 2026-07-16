@@ -39,7 +39,7 @@ jobs:
         run: npx playwright install --with-deps
 
       - name: Start wp-env
-        run: npm run wp-env start
+        run: npx wp-env start
 
       - name: Run E2E tests
         run: npm run test:e2e -- --project=${{ matrix.browser }}
