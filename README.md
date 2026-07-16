@@ -17,10 +17,6 @@ This plugin restores support by sending the older COEP/COOP headers on browsers 
 - Adds `credentialless` attribute to iframes so they continue working under COEP.
 - Filters embed previews for providers that do not support credentialless iframes (Facebook, SmugMug).
 
-### HEIC uploads
-
-WordPress 7.1 handles HEIC/HEIF uploads in core: MIME types, file type detection, HEIC-to-JPEG output mapping, and client-side conversion via the vips WASM pipeline or a canvas-based fallback for browsers with native HEVC decoding (such as Safari). This plugin no longer ships any HEIC handling of its own.
-
 ## Requirements
 
 - WordPress 6.8+ with the Gutenberg plugin, or WordPress 7.1+.
