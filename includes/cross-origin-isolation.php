@@ -100,15 +100,103 @@ function csme_start_coep_coop_output_buffer() {
 			header( 'Cross-Origin-Opener-Policy: same-origin' );
 			header( 'Cross-Origin-Embedder-Policy: ' . $coep );
 
+			// Let core/Gutenberg handle AUDIO, LINK, SCRIPT, VIDEO, SOURCE.
 			if ( function_exists( 'wp_add_crossorigin_attributes' ) ) {
-				return wp_add_crossorigin_attributes( $output );
+				$output = wp_add_crossorigin_attributes( $output );
 			} elseif ( function_exists( 'gutenberg_add_crossorigin_attributes' ) ) {
-				return gutenberg_add_crossorigin_attributes( $output );
+				$output = gutenberg_add_crossorigin_attributes( $output );
+			}
+
+			/*
+			 * Under require-corp (Safari), cross-origin images without CORP
+			 * headers are blocked, and a CORS request via
+			 * crossorigin="anonymous" is their only chance to load. Under
+			 * credentialless (Firefox), no-cors images already load fine,
+			 * and forcing CORS mode would break images from servers that
+			 * do not send Access-Control-Allow-Origin.
+			 */
+			if ( 'require-corp' === $coep ) {
+				$output = csme_add_crossorigin_to_images( $output );
 			}
 
 			return $output;
 		}
 	);
+}
+
+/**
+ * Adds crossorigin="anonymous" to cross-origin IMG tags.
+ *
+ * Core/Gutenberg removed IMG from the elements receiving crossorigin
+ * attributes (see Gutenberg#76618). Under require-corp isolation images
+ * still need the attribute, so this plugin adds it back for IMG only.
+ *
+ * @since 1.1.0
+ *
+ * @param string $html HTML input.
+ * @return string Modified HTML.
+ */
+function csme_add_crossorigin_to_images( $html ) {
+	if ( ! class_exists( 'WP_HTML_Tag_Processor' ) ) {
+		return $html;
+	}
+
+	$site_url = site_url();
+
+	$processor = new WP_HTML_Tag_Processor( $html );
+
+	while ( $processor->next_tag( 'IMG' ) ) {
+		if ( null !== $processor->get_attribute( 'crossorigin' ) ) {
+			continue;
+		}
+
+		$urls = array();
+
+		$src = $processor->get_attribute( 'src' );
+		if ( is_string( $src ) ) {
+			$urls[] = $src;
+		}
+
+		// Each srcset candidate is a URL optionally followed by a descriptor.
+		$srcset = $processor->get_attribute( 'srcset' );
+		if ( is_string( $srcset ) ) {
+			foreach ( explode( ',', $srcset ) as $candidate ) {
+				$candidate = trim( $candidate );
+				if ( '' !== $candidate ) {
+					$parts  = preg_split( '/\s+/', $candidate );
+					$urls[] = $parts[0];
+				}
+			}
+		}
+
+		foreach ( $urls as $url ) {
+			if ( csme_is_cross_origin_url( $url, $site_url ) ) {
+				$processor->set_attribute( 'crossorigin', 'anonymous' );
+				break;
+			}
+		}
+	}
+
+	return $processor->get_updated_html();
+}
+
+/**
+ * Whether a URL points to a different origin than the site.
+ *
+ * Root-relative URLs (a single leading slash) are same-origin;
+ * protocol-relative URLs (double leading slash) are treated as
+ * cross-origin, unlike core's check, which misclassifies them.
+ *
+ * @since 1.1.0
+ *
+ * @param string $url      URL to check.
+ * @param string $site_url The site URL.
+ * @return bool Whether the URL is cross-origin.
+ */
+function csme_is_cross_origin_url( $url, $site_url ) {
+	$is_root_relative = str_starts_with( $url, '/' ) && ! str_starts_with( $url, '//' );
+
+	return ! str_starts_with( $url, $site_url ) && ! $is_root_relative;
 }
 
 /**

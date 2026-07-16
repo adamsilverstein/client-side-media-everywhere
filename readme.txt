@@ -67,6 +67,9 @@ WordPress 7.1 converts HEIC images client-side where possible and server-side ot
 
 == Changelog ==
 
+= Unreleased =
+* Added crossorigin="anonymous" to cross-origin images on Safari (require-corp), where they would otherwise be blocked by the embedder policy. Covers src and srcset, including protocol-relative URLs.
+
 = 1.0.0 =
 * First stable release, fully compatible with the WordPress 7.1 client-side media processing feature.
 * Removed the HEIC conversion module (heic2any/CDN): WordPress 7.1 handles HEIC uploads in core.
