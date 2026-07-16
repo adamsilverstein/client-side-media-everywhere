@@ -19,9 +19,21 @@
 	/**
 	 * Adds crossorigin="anonymous" and credentialless attributes to elements.
 	 *
+	 * IMG elements only get the attribute under require-corp (Safari):
+	 * crossorigin="anonymous" forces CORS-mode fetches, which breaks
+	 * cross-origin images from servers without CORS headers. Under
+	 * credentialless those images load fine without the attribute.
+	 *
 	 * @param {Element} el The element to modify.
 	 */
 	function addCrossOriginAttributes( el ) {
+		if (
+			el.nodeName === 'IMG' &&
+			window.__coepMode !== 'require-corp'
+		) {
+			return;
+		}
+
 		if ( ! el.hasAttribute( 'crossorigin' ) ) {
 			el.setAttribute( 'crossorigin', 'anonymous' );
 		}
