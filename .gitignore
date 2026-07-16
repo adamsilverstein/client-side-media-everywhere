@@ -3,3 +3,4 @@ node_modules/
 composer.lock
 .phpunit.cache/
 .phpcs-cache
+dist/

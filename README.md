@@ -63,6 +63,18 @@ add_filter( 'csme_heic_library_url', function () {
 } );
 ```
 
+## Development
+
+### Building a release zip
+
+To package the plugin for the WordPress.org plugin repository (or manual installation), run:
+
+```bash
+composer build
+```
+
+This produces `dist/client-side-media-experiments.zip` containing only the runtime files, with a single top-level `client-side-media-experiments/` directory as required by WordPress.org. Development files are excluded per `.distignore` - the same exclusion list used by the release deploy workflow.
+
 ## License
 
 This plugin is licensed under [GPL-2.0-or-later](https://www.gnu.org/licenses/gpl-2.0.html).

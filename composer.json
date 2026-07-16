@@ -15,6 +15,7 @@
 		"yoast/phpunit-polyfills": "^2.0"
 	},
 	"scripts": {
+		"build": "bin/build-zip.sh",
 		"lint": "phpcs",
 		"lint:fix": "phpcbf",
 		"test": "phpunit"
