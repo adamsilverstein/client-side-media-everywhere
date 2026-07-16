@@ -22,16 +22,16 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @return bool
  */
 function csme_should_use_coep_coop() {
-	$chrome_version = null;
+	$chromium_version = null;
 
-	if ( function_exists( 'wp_get_chrome_major_version' ) ) {
-		$chrome_version = wp_get_chrome_major_version();
-	} elseif ( function_exists( 'gutenberg_get_chrome_major_version' ) ) {
-		$chrome_version = gutenberg_get_chrome_major_version();
+	if ( function_exists( 'wp_get_chromium_major_version' ) ) {
+		$chromium_version = wp_get_chromium_major_version();
+	} elseif ( function_exists( 'gutenberg_get_chromium_major_version' ) ) {
+		$chromium_version = gutenberg_get_chromium_major_version();
 	}
 
-	// DIP is used on Chrome 137+. Only use COEP/COOP when DIP is NOT active.
-	$use_dip = null !== $chrome_version && $chrome_version >= 137;
+	// DIP is used on Chromium 137+. Only use COEP/COOP when DIP is NOT active.
+	$use_dip = null !== $chromium_version && $chromium_version >= 137;
 
 	/**
 	 * Filters whether to use COEP/COOP for cross-origin isolation.
