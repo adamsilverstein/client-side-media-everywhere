@@ -24,6 +24,7 @@ This plugin restores support for Firefox and Safari by sending the older COEP/CO
 * Adds `crossorigin="anonymous"` attributes to cross-origin resources.
 * Adds `credentialless` attribute to iframes so they continue working under COEP.
 * Filters embed previews for providers that do not support credentialless iframes (Facebook, SmugMug).
+* Extends client-side media processing to the Media Library grid (Media > Library), which core processes server-side. On the grid screen the plugin restores cross-origin isolation - including sending the Document-Isolation-Policy header on Chrome 137+, which core does not send there - and routes uploads through the browser pipeline (REST upload, client-side thumbnails, sideload, finalize), falling back to the classic upload when unsupported. Only grid mode is covered; list mode and the Add New Media File screen upload server-side.
 
 **Requirements:**
 
@@ -49,7 +50,11 @@ No. Chrome 137+ uses Document-Isolation-Policy, which is handled by WordPress co
 
 = Will this break my site? =
 
-The COEP/COOP headers are only sent on block editor admin pages, not on the front-end. Some third-party plugins that use iframes in the editor may be affected. If you experience issues, you can deactivate the plugin.
+The isolation headers are only sent on the block editor admin pages and the Media Library grid screen, not on the front-end. Some third-party plugins that use iframes in the editor may be affected. If you experience issues, you can deactivate the plugin.
+
+= Does client-side processing work in the Media Library? =
+
+Yes. On the Media Library grid (Media > Library) this plugin routes uploads through the browser pipeline, the same way the block editor does, on browsers that support it. List mode and the separate Add New Media File screen still upload server-side. When client-side processing is unavailable, grid uploads fall back to the classic server-side upload automatically.
 
 = Can I disable the COEP/COOP behavior? =
 
