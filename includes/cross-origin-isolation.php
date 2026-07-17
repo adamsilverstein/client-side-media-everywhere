@@ -229,6 +229,13 @@ function csme_enqueue_scripts( $hook_suffix ) {
 		if ( 'grid' !== csme_get_media_library_mode() ) {
 			return;
 		}
+
+		// No isolation headers are sent on the grid without the
+		// upload-media package (see csme_set_up_media_library_isolation()),
+		// so the observer script would be dead weight.
+		if ( ! wp_script_is( 'wp-upload-media', 'registered' ) ) {
+			return;
+		}
 	} elseif ( ! in_array( $hook_suffix, array( 'post.php', 'post-new.php', 'site-editor.php', 'widgets.php' ), true ) ) {
 		return;
 	}

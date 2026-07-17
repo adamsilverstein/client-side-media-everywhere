@@ -69,6 +69,16 @@ function csme_set_up_media_library_isolation() {
 		return;
 	}
 
+	/*
+	 * Without the upload-media package (core 7.1+ or Gutenberg) the
+	 * pipeline cannot run, so skip the isolation headers: COEP can break
+	 * third-party iframes on the screen for no benefit. Default scripts
+	 * register on the first wp_scripts() call, so this is reliable here.
+	 */
+	if ( ! wp_script_is( 'wp-upload-media', 'registered' ) ) {
+		return;
+	}
+
 	if ( csme_should_use_coep_coop() ) {
 		csme_start_coep_coop_output_buffer();
 	} elseif ( function_exists( 'wp_start_cross_origin_isolation_output_buffer' ) ) {
