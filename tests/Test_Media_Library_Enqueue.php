@@ -26,9 +26,6 @@ class Test_Media_Library_Enqueue extends WP_UnitTestCase {
 		// The integration requires core's (or Gutenberg's) upload-media
 		// package to be registered. Register a stub for the test.
 		wp_register_script( 'wp-upload-media', 'https://example.org/upload-media.js', array(), '1.0', true );
-
-		// Register a test-specific filter for big_image_size_threshold.
-		add_filter( 'big_image_size_threshold', array( $this, 'test_big_image_size_threshold_callback' ), 999 );
 	}
 
 	/**
@@ -36,10 +33,6 @@ class Test_Media_Library_Enqueue extends WP_UnitTestCase {
 	 */
 	public function tear_down() {
 		unset( $_GET['mode'] );
-
-		// Remove only the test's own filter.
-		remove_filter( 'big_image_size_threshold', array( $this, 'test_big_image_size_threshold_callback' ), 999 );
-
 		wp_dequeue_script( 'csme-media-library-upload' );
 		wp_deregister_script( 'csme-media-library-upload' );
 
@@ -57,15 +50,6 @@ class Test_Media_Library_Enqueue extends WP_UnitTestCase {
 		}
 
 		parent::tear_down();
-	}
-
-	/**
-	 * Test-owned callback for big_image_size_threshold filter.
-	 *
-	 * @return int|false Pass-through for the filtered value.
-	 */
-	public function test_big_image_size_threshold_callback( $threshold ) {
-		return $threshold;
 	}
 
 	/**
