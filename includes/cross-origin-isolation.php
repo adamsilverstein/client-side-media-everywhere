@@ -222,14 +222,30 @@ function csme_enqueue_scripts( $hook_suffix ) {
 		return;
 	}
 
-	if ( ! in_array( $hook_suffix, array( 'post.php', 'post-new.php', 'site-editor.php', 'widgets.php' ), true ) ) {
+	$is_media_library = 'upload.php' === $hook_suffix;
+
+	if ( $is_media_library ) {
+		// Only the grid mode has an uploader; list mode is untouched.
+		if ( 'grid' !== csme_get_media_library_mode() ) {
+			return;
+		}
+	} elseif ( ! in_array( $hook_suffix, array( 'post.php', 'post-new.php', 'site-editor.php', 'widgets.php' ), true ) ) {
 		return;
 	}
+
+	/*
+	 * The MutationObserver portion of the script is dependency-free and
+	 * its block editor section self-guards, so the Media Library does
+	 * not need the block editor scripts dragged onto the page.
+	 */
+	$dependencies = $is_media_library
+		? array()
+		: array( 'wp-block-editor', 'wp-element', 'wp-hooks', 'wp-compose' );
 
 	wp_enqueue_script(
 		'csme-cross-origin-isolation-coep',
 		CSME_PLUGIN_URL . 'js/cross-origin-isolation-coep.js',
-		array( 'wp-block-editor', 'wp-element', 'wp-hooks', 'wp-compose' ),
+		$dependencies,
 		CSME_VERSION,
 		true
 	);
