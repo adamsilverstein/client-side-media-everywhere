@@ -92,13 +92,16 @@ class Test_Output_Buffer extends WP_UnitTestCase {
 	/**
 	 * Helper to get sent headers as an array.
 	 *
+	 * headers_list() always returns an empty array under the CLI SAPI, so
+	 * without Xdebug sent headers cannot be observed and the test is skipped.
+	 *
 	 * @return array
 	 */
 	private function get_sent_headers() {
-		if ( function_exists( 'xdebug_get_headers' ) ) {
-			return xdebug_get_headers();
+		if ( ! function_exists( 'xdebug_get_headers' ) ) {
+			$this->markTestSkipped( 'Xdebug is required to inspect sent headers under the CLI SAPI.' );
 		}
 
-		return headers_list();
+		return xdebug_get_headers();
 	}
 }
