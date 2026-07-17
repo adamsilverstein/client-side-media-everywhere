@@ -6,7 +6,7 @@
  */
 
 // Define plugin constants.
-define( 'CSME_VERSION', '1.0.0' );
+define( 'CSME_VERSION', '1.1.0' );
 define( 'CSME_PLUGIN_DIR', dirname( __DIR__ ) . '/' );
 define( 'CSME_PLUGIN_URL', 'http://example.org/wp-content/plugins/client-side-media-everywhere/' );
 
