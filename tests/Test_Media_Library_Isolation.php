@@ -41,6 +41,22 @@ class Test_Media_Library_Isolation extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A non-canonical query string mode is rejected, matching core.
+	 *
+	 * Core compares the raw value strictly, so `?mode=GRID` falls back
+	 * to the user option rather than being normalized to `grid`.
+	 */
+	public function test_non_canonical_query_string_mode_falls_back_to_user_option() {
+		$user_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $user_id );
+		update_user_option( $user_id, 'media_library_mode', 'list' );
+
+		$_GET['mode'] = 'GRID';
+
+		$this->assertSame( 'list', csme_get_media_library_mode() );
+	}
+
+	/**
 	 * Mode is read from the user option when no query string is present.
 	 */
 	public function test_mode_from_user_option() {

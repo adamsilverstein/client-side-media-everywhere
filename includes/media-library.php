@@ -28,10 +28,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 function csme_get_media_library_mode() {
 	$modes = array( 'grid', 'list' );
 
-	// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-	if ( isset( $_GET['mode'] ) && in_array( sanitize_key( $_GET['mode'] ), $modes, true ) ) {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		return sanitize_key( $_GET['mode'] );
+	/*
+	 * Match core: compare the raw value against the whitelist, so inputs
+	 * core rejects (e.g. `?mode=GRID`) fall back to the user option here
+	 * too. The strict whitelist comparison doubles as sanitization.
+	 */
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+	$requested = isset( $_GET['mode'] ) ? wp_unslash( $_GET['mode'] ) : '';
+	if ( in_array( $requested, $modes, true ) ) {
+		return $requested;
 	}
 
 	$mode = get_user_option( 'media_library_mode', get_current_user_id() );
