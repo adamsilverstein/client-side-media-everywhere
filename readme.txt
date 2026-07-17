@@ -3,7 +3,7 @@ Contributors: adamsilverstein
 Tags: media, performance, cross-origin, wasm
 Requires at least: 6.8
 Tested up to: 7.1
-Stable tag: 1.0.0
+Stable tag: 1.1.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -65,10 +65,12 @@ WordPress 7.1 converts HEIC images client-side where possible and server-side ot
 
 == Changelog ==
 
-= Unreleased =
+= 1.1.0 =
 * Renamed the plugin from "Client-Side Media Experiments" to "Client-Side Media Everywhere" to better describe what it does: bringing the WordPress client-side media processing feature to browsers that core does not cover.
 * Removed the settings screen and the `csme_enabled` option. Activating the plugin now always enables the COEP/COOP headers; deactivate the plugin to turn them off. Note: sites that had unchecked **Enable** under Settings > Media will have the headers re-enabled after updating. Use the `csme_use_coep_coop` filter to disable the behavior programmatically.
 * Added crossorigin="anonymous" to cross-origin images on Safari (require-corp), where they would otherwise be blocked by the embedder policy. Covers src and srcset, including protocol-relative URLs.
+* Included the GPL-2.0 license text in the plugin package.
+* Excluded development files (package.json, package-lock.json, .wp-env.json) from the distribution zip.
 
 = 1.0.0 =
 * First stable release, fully compatible with the WordPress 7.1 client-side media processing feature.
