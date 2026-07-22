@@ -8,7 +8,7 @@ Enables client-side media processing on Firefox and Safari via COEP/COOP cross-o
 
 WordPress 7.1 and Gutenberg include client-side media processing powered by WebAssembly (wasm-vips). This requires cross-origin isolation, which is achieved via Document-Isolation-Policy (DIP) on Chrome 137+.
 
-However, Firefox and Safari do not yet support DIP, so client-side media processing is disabled on those browsers.
+However, Firefox and Safari do not yet support DIP, and neither does Chrome before 137, so client-side media processing is disabled on those browsers.
 
 This plugin restores support by sending the older COEP/COOP headers on browsers where DIP is not available:
 
@@ -16,6 +16,22 @@ This plugin restores support by sending the older COEP/COOP headers on browsers 
 - Adds `crossorigin="anonymous"` attributes to cross-origin resources.
 - Adds `credentialless` attribute to iframes so they continue working under COEP.
 - Filters embed previews for providers that do not support credentialless iframes (Facebook, SmugMug).
+
+## Tradeoffs
+
+Cross-origin isolation is a security boundary. It works by making the browser refuse cross-origin resources that have not opted in, or strip their credentials. That is what unlocks `SharedArrayBuffer` and wasm-vips, but it is also why Chrome moved to Document-Isolation-Policy: DIP gives the same isolation without imposing these restrictions on the rest of the page.
+
+**Scope of the impact.** Only browsers that receive the COEP/COOP headers are affected - Firefox, Safari, and Chrome < 137 - and only on block editor screens (post editor, site editor, block widgets) for users who can upload files. The front-end, the rest of wp-admin, and Chrome 137+ are untouched.
+
+What can break on those screens:
+
+- **oEmbed previews.** Embeds are iframed. Under `credentialless` (Firefox, Chrome < 137) the plugin adds the `credentialless` attribute so they still load, but without cookies - embeds that need a logged-in session render logged-out or not at all. Facebook and SmugMug do not work with credentialless iframes, so their live previews are disabled in the editor and the placeholder is shown instead. Safari does not support `credentialless` at all, so under `require-corp` any embed whose provider does not send its own COEP header is blocked outright.
+- **Media served from third-party origins.** Images, video, audio, and fonts loaded into the editor from a CDN or another domain must opt in with `Cross-Origin-Resource-Policy`. Under `credentialless` they load but without credentials, so anything behind a signed cookie fails. Under `require-corp` (Safari) they are blocked unless the server sends CORP - the plugin adds `crossorigin="anonymous"` to cross-origin images to give them a CORS path instead, which only helps if the server sends `Access-Control-Allow-Origin`.
+- **Popup-based authentication.** `Cross-Origin-Opener-Policy: same-origin` severs the `window.opener` link to cross-origin popups. Plugins that connect to an external service by opening an OAuth popup and waiting for it to call back into the opener will hang.
+- **Plugins that load editor assets cross-origin.** Any third-party script, stylesheet, or font pulled into the editor from another origin is subject to the same rules.
+- **The classic block.** The classic block and other TinyMCE-based UIs commonly load third-party assets, and are a frequent place for the failures above to surface.
+
+These are the same constraints the block editor lived with before Chrome shipped Document-Isolation-Policy. If you hit one, you can suppress the headers per environment or per user with the [`csme_use_coep_coop` filter](#disable-coepcoop-headers-programmatically), or deactivate the plugin - media processing then falls back to the server on the affected browsers, which is the behavior without this plugin installed.
 
 ## Requirements
 
