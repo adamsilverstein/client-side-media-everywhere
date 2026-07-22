@@ -141,6 +141,73 @@ test.describe( 'Media Library grid uploads', () => {
 		expect( asyncUploads ).toEqual( [] );
 	} );
 
+	test( 'warns before leaving while a pipeline upload is in flight', async ( {
+		page,
+	} ) => {
+		await page.goto( '/wp-admin/upload.php?mode=grid' );
+
+		const isolated = await page.evaluate( () =>
+			Boolean( window.crossOriginIsolated )
+		);
+		test.skip(
+			! isolated,
+			'The client-side pipeline requires a cross-origin isolated context'
+		);
+
+		// Hold sideload requests so the upload stays in flight at a
+		// deterministic point.
+		const heldRoutes: Array< {
+			continue: () => Promise< void >;
+		} > = [];
+		let holding = true;
+		await page.route(
+			( url ) => decodeURIComponent( url.href ).includes( '/sideload' ),
+			async ( route ) => {
+				if ( holding ) {
+					heldRoutes.push( route );
+					return;
+				}
+				await route.continue();
+			}
+		);
+		const sideloadRequested = page.waitForRequest(
+			( request ) =>
+				decodeURIComponent( request.url() ).includes( '/sideload' ),
+			{ timeout: 60_000 }
+		);
+
+		const fileInput = page.locator( FILE_INPUT_SELECTOR ).first();
+		await fileInput.waitFor( { state: 'attached', timeout: 30_000 } );
+		await fileInput.setInputFiles( TEST_IMAGE_PATH );
+		await sideloadRequested;
+
+		// A synthetic cancelable event exercises the guard's listener
+		// without triggering the real (untestable) browser prompt.
+		const preventedWhileUploading = await page.evaluate( () => {
+			const event = new Event( 'beforeunload', { cancelable: true } );
+			window.dispatchEvent( event );
+			return event.defaultPrevented;
+		} );
+		expect( preventedWhileUploading ).toBe( true );
+
+		// Release the held requests, let the upload finish, and verify the
+		// guard disengages once nothing is in flight anymore.
+		holding = false;
+		for ( const route of heldRoutes ) {
+			await route.continue();
+		}
+		await expect(
+			page.locator( 'li.attachment:not(.uploading)' ).first()
+		).toBeVisible( { timeout: 60_000 } );
+
+		const preventedAfterUpload = await page.evaluate( () => {
+			const event = new Event( 'beforeunload', { cancelable: true } );
+			window.dispatchEvent( event );
+			return event.defaultPrevented;
+		} );
+		expect( preventedAfterUpload ).toBe( false );
+	} );
+
 	test( 'shows an error for a disallowed file type', async ( {
 		page,
 	} ) => {
