@@ -45,5 +45,7 @@ function csme_init() {
 	}
 
 	require_once CSME_PLUGIN_DIR . 'includes/cross-origin-isolation.php';
+	require_once CSME_PLUGIN_DIR . 'includes/media-library.php';
+	require_once CSME_PLUGIN_DIR . 'includes/media-new.php';
 }
 add_action( 'plugins_loaded', 'csme_init' );

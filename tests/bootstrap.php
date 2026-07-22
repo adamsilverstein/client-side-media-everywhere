@@ -10,11 +10,6 @@ define( 'CSME_VERSION', '1.1.0' );
 define( 'CSME_PLUGIN_DIR', dirname( __DIR__ ) . '/' );
 define( 'CSME_PLUGIN_URL', 'http://example.org/wp-content/plugins/client-side-media-everywhere/' );
 
-// Stub the client-side media processing gate so the plugin file can load.
-function wp_is_client_side_media_processing_enabled() {
-	return true;
-}
-
 // Determine the WP tests directory.
 $_tests_dir = getenv( 'WP_TESTS_DIR' );
 
@@ -37,6 +32,8 @@ require_once $_tests_dir . '/includes/functions.php';
  */
 function _manually_load_plugin() {
 	require_once CSME_PLUGIN_DIR . 'includes/cross-origin-isolation.php';
+	require_once CSME_PLUGIN_DIR . 'includes/media-library.php';
+	require_once CSME_PLUGIN_DIR . 'includes/media-new.php';
 }
 
 tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );

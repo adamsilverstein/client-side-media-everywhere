@@ -222,14 +222,41 @@ function csme_enqueue_scripts( $hook_suffix ) {
 		return;
 	}
 
-	if ( ! in_array( $hook_suffix, array( 'post.php', 'post-new.php', 'site-editor.php', 'widgets.php' ), true ) ) {
+	$is_media_screen = in_array( $hook_suffix, array( 'upload.php', 'media-new.php' ), true );
+
+	if ( 'upload.php' === $hook_suffix ) {
+		// Only the grid mode has an uploader; list mode uploads happen on
+		// media-new.php (the list view's "Add New Media File" links there).
+		if ( 'grid' !== csme_get_media_library_mode() ) {
+			return;
+		}
+	}
+
+	if ( $is_media_screen ) {
+		// No isolation headers are sent on these screens without the
+		// upload-media package (see csme_set_up_media_library_isolation()
+		// and csme_set_up_media_new_isolation()), so the observer script
+		// would be dead weight.
+		if ( ! wp_script_is( 'wp-upload-media', 'registered' ) ) {
+			return;
+		}
+	} elseif ( ! in_array( $hook_suffix, array( 'post.php', 'post-new.php', 'site-editor.php', 'widgets.php' ), true ) ) {
 		return;
 	}
+
+	/*
+	 * The MutationObserver portion of the script is dependency-free and
+	 * its block editor section self-guards, so the media screens do
+	 * not need the block editor scripts dragged onto the page.
+	 */
+	$dependencies = $is_media_screen
+		? array()
+		: array( 'wp-block-editor', 'wp-element', 'wp-hooks', 'wp-compose' );
 
 	wp_enqueue_script(
 		'csme-cross-origin-isolation-coep',
 		CSME_PLUGIN_URL . 'js/cross-origin-isolation-coep.js',
-		array( 'wp-block-editor', 'wp-element', 'wp-hooks', 'wp-compose' ),
+		$dependencies,
 		CSME_VERSION,
 		true
 	);

@@ -9,6 +9,10 @@
 		<testsuite name="Client-Side Media Everywhere">
 			<directory suffix=".php">tests/</directory>
 			<exclude>tests/bootstrap.php</exclude>
+			<!-- Playwright fixtures, not PHPUnit tests. They are loaded as
+			     real mu-plugins under wp-env, so scanning them here would
+			     redeclare their functions. -->
+			<exclude>tests/e2e</exclude>
 		</testsuite>
 	</testsuites>
 

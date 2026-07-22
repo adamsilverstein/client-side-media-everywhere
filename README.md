@@ -17,6 +17,16 @@ This plugin restores support by sending the older COEP/COOP headers on browsers 
 - Adds `credentialless` attribute to iframes so they continue working under COEP.
 - Filters embed previews for providers that do not support credentialless iframes (Facebook, SmugMug).
 
+### Media Library uploads
+
+WordPress core's client-side media pipeline only runs in the block editor; the classic Media Library at **Media > Library** still uploads through the server. This plugin extends the pipeline to every Media Library upload surface so images are processed in the browser:
+
+- Restores cross-origin isolation on the Media Library grid (`upload.php`) and the **Add New Media File** screen (`media-new.php`), neither of which core isolates. On Firefox, Safari, and Chrome < 137 this uses the COEP/COOP headers above; on Chrome 137+ the plugin sends the `Document-Isolation-Policy` header there itself, since core only sends it in the block editor.
+- Intercepts the grid uploader and routes files through the same client-side pipeline the block editor uses: the original image is uploaded via the REST API and thumbnails are generated in the browser, then sideloaded and finalized. HEIC conversion, animated GIF handling, and oversized-file fallbacks are all handled by core's pipeline.
+- Routes the **Add New Media File** screen (`media-new.php`) through the same pipeline, reusing the screen's existing progress and error UI. This is also how the Media Library's **list mode** uploads: its "Add New Media File" button links to this screen, so both Media Library views are covered.
+- Warns before leaving the page while a pipeline upload is in flight, since browser-generated thumbnails that have not been sideloaded yet would be lost (classic uploads finish server-side and need no guard).
+- Falls back cleanly to the classic server-side upload when the browser does not support client-side processing.
+
 ## Requirements
 
 - WordPress 6.8+ with the Gutenberg plugin, or WordPress 7.1+.

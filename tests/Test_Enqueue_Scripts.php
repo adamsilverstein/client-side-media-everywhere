@@ -8,12 +8,47 @@
 class Test_Enqueue_Scripts extends WP_UnitTestCase {
 
 	/**
+	 * Preserved state for cleanup.
+	 *
+	 * @var array<string, mixed>
+	 */
+	private $preserved_state = array();
+
+	/**
+	 * Set up before each test: register a stub upload-media script.
+	 */
+	public function set_up() {
+		parent::set_up();
+
+		// Preserve existing wp-upload-media registration if any.
+		$this->preserved_state['wp_upload_media'] = wp_scripts()->query( 'wp-upload-media', 'registered' );
+
+		// The Media Library enqueue is gated on the upload-media package.
+		wp_register_script( 'wp-upload-media', 'https://example.org/upload-media.js', array(), '1.0', true );
+	}
+
+	/**
 	 * Tear down after each test.
 	 */
 	public function tear_down() {
 		remove_all_filters( 'csme_use_coep_coop' );
+		unset( $_GET['mode'] );
 		wp_dequeue_script( 'csme-cross-origin-isolation-coep' );
 		wp_deregister_script( 'csme-cross-origin-isolation-coep' );
+
+		// Restore pre-existing wp-upload-media registration or deregister.
+		wp_deregister_script( 'wp-upload-media' );
+		if ( false !== $this->preserved_state['wp_upload_media'] ) {
+			$script = $this->preserved_state['wp_upload_media'];
+			wp_register_script(
+				'wp-upload-media',
+				$script->src,
+				$script->deps,
+				$script->ver,
+				$script->args
+			);
+		}
+
 		parent::tear_down();
 	}
 
@@ -116,5 +151,71 @@ class Test_Enqueue_Scripts extends WP_UnitTestCase {
 		csme_enqueue_scripts( 'widgets.php' );
 
 		$this->assertTrue( wp_script_is( 'csme-cross-origin-isolation-coep', 'enqueued' ) );
+	}
+
+	/**
+	 * Script is enqueued on upload.php in grid mode.
+	 */
+	public function test_script_enqueued_on_upload_php_grid() {
+		add_filter( 'csme_use_coep_coop', '__return_true' );
+		$_GET['mode'] = 'grid';
+
+		csme_enqueue_scripts( 'upload.php' );
+
+		$this->assertTrue( wp_script_is( 'csme-cross-origin-isolation-coep', 'enqueued' ) );
+	}
+
+	/**
+	 * Script is not enqueued on upload.php in list mode.
+	 */
+	public function test_script_not_enqueued_on_upload_php_list() {
+		add_filter( 'csme_use_coep_coop', '__return_true' );
+		$_GET['mode'] = 'list';
+
+		csme_enqueue_scripts( 'upload.php' );
+
+		$this->assertFalse( wp_script_is( 'csme-cross-origin-isolation-coep', 'enqueued' ) );
+	}
+
+	/**
+	 * Script is not enqueued on upload.php without the upload-media package.
+	 *
+	 * No isolation headers are sent without it, so the observer script
+	 * would be dead weight.
+	 */
+	public function test_script_not_enqueued_on_upload_php_without_upload_media() {
+		add_filter( 'csme_use_coep_coop', '__return_true' );
+		$_GET['mode'] = 'grid';
+
+		wp_deregister_script( 'wp-upload-media' );
+
+		csme_enqueue_scripts( 'upload.php' );
+
+		$this->assertFalse( wp_script_is( 'csme-cross-origin-isolation-coep', 'enqueued' ) );
+	}
+
+	/**
+	 * On upload.php the observer script does not depend on wp-block-editor.
+	 */
+	public function test_upload_php_deps_exclude_block_editor() {
+		add_filter( 'csme_use_coep_coop', '__return_true' );
+		$_GET['mode'] = 'grid';
+
+		csme_enqueue_scripts( 'upload.php' );
+
+		$script = wp_scripts()->registered['csme-cross-origin-isolation-coep'];
+		$this->assertNotContains( 'wp-block-editor', $script->deps );
+	}
+
+	/**
+	 * On block editor screens the observer script still depends on wp-block-editor.
+	 */
+	public function test_editor_deps_include_block_editor() {
+		add_filter( 'csme_use_coep_coop', '__return_true' );
+
+		csme_enqueue_scripts( 'post.php' );
+
+		$script = wp_scripts()->registered['csme-cross-origin-isolation-coep'];
+		$this->assertContains( 'wp-block-editor', $script->deps );
 	}
 }
