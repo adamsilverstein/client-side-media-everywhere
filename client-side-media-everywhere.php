@@ -7,7 +7,7 @@
  * Requires at least: 6.8
  * Requires PHP: 7.4
  * Author:      Adam Silverstein
- * Author URI:  https://developer.wordpress.org
+ * Author URI:  https://profiles.wordpress.org/adamsilverstein/profile/
  * License:     GPL-2.0-or-later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: client-side-media-everywhere
