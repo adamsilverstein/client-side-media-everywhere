@@ -3,7 +3,7 @@ Contributors: adamsilverstein
 Tags: media, safari, firefox, performance, cross-origin
 Requires at least: 6.8
 Tested up to: 7.1
-Stable tag: 1.1.0
+Stable tag: 1.1.1
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -90,6 +90,11 @@ To keep the plugin active but suppress the headers programmatically (for example
 WordPress 7.1 converts HEIC images client-side where possible and server-side otherwise. This plugin no longer includes any HEIC handling of its own.
 
 == Changelog ==
+
+= 1.1.1 =
+* Reworked the description to open with a plain explanation of what the plugin does, instead of leading with wasm-vips, Document-Isolation-Policy and COEP/COOP. The technical explanation is still there, further down.
+* Added `safari` and `firefox` to the plugin tags, since that is what people are likely searching for.
+* No functional changes: the plugin code is identical to 1.1.0.
 
 = 1.1.0 =
 * Renamed the plugin from "Client-Side Media Experiments" to "Client-Side Media Everywhere" to better describe what it does: bringing the WordPress client-side media processing feature to browsers that core does not cover.
