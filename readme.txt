@@ -12,13 +12,23 @@ Enables client-side media processing on Firefox and Safari via COEP/COOP cross-o
 
 == Description ==
 
+**In one sentence: this plugin gets client-side media processing working in Safari and Firefox, which WordPress otherwise only does in Chrome.**
+
+When you upload an image in Chrome, WordPress resizes and compresses it on your own device before it is sent, so less data goes over the wire and your server does much less work. In Safari and Firefox that is switched off, and uploads fall back to the older server-side path. This plugin switches it back on.
+
+There is nothing to configure - activate the plugin and it works. Chrome is unaffected, because WordPress already handles it there.
+
+One thing to know before you install: this works by turning on cross-origin isolation, which is a real security boundary and can affect embeds and third-party media inside the editor. It is worth reading the Tradeoffs section below first.
+
+**Why WordPress switches it off:**
+
 WordPress 7.1 and Gutenberg include client-side media processing powered by WebAssembly (wasm-vips). This requires cross-origin isolation, which is achieved via Document-Isolation-Policy (DIP) on Chrome 137+.
 
 However, Firefox and Safari do not yet support DIP, and neither does Chrome before 137, so client-side media processing is disabled on those browsers.
 
 This plugin restores support for Firefox and Safari by sending the older COEP/COOP headers (Cross-Origin-Embedder-Policy / Cross-Origin-Opener-Policy) on browsers where DIP is not available.
 
-**What this plugin does:**
+**Under the hood:**
 
 * Sends `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: credentialless` (or `require-corp` on Safari) headers in the block editor.
 * Adds `crossorigin="anonymous"` attributes to cross-origin resources.

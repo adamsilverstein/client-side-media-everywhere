@@ -2,6 +2,16 @@
 
 Enables client-side media processing on Firefox and Safari via COEP/COOP cross-origin isolation headers.
 
+## What this plugin does
+
+**In one sentence: this plugin gets client-side media processing working in Safari and Firefox, which WordPress otherwise only does in Chrome.**
+
+When you upload an image in Chrome, WordPress resizes and compresses it on your own device before it is sent, so less data goes over the wire and your server does much less work. In Safari and Firefox that is switched off, and uploads fall back to the older server-side path. This plugin switches it back on.
+
+There is nothing to configure - activate the plugin and it works. Chrome is unaffected, because WordPress already handles it there.
+
+One thing to know before you install: this works by turning on cross-origin isolation, which is a real security boundary and can affect embeds and third-party media inside the editor. It is worth reading the [Tradeoffs](#tradeoffs) section first.
+
 ## Features
 
 ### Cross-Origin Isolation (COEP/COOP)
