@@ -1,6 +1,6 @@
 === Client-Side Media Everywhere ===
 Contributors: adamsilverstein
-Tags: media, performance, cross-origin, wasm
+Tags: media, safari, firefox, performance, cross-origin
 Requires at least: 6.8
 Tested up to: 7.1
 Stable tag: 1.1.0
