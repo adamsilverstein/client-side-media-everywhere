@@ -1,6 +1,6 @@
 <?php
 /**
- * Tests for csme_set_up_cross_origin_isolation() guard checks.
+ * Tests for the cross-origin isolation guard checks and set-up.
  *
  * @package ClientSideMediaEverywhere
  */
@@ -24,12 +24,7 @@ class Test_Cross_Origin_Isolation extends WP_UnitTestCase {
 	public function test_returns_early_when_should_use_coep_coop_is_false() {
 		add_filter( 'csme_use_coep_coop', '__return_false' );
 
-		// Should not start an output buffer.
-		$ob_level_before = ob_get_level();
-		csme_set_up_cross_origin_isolation();
-		$ob_level_after = ob_get_level();
-
-		$this->assertSame( $ob_level_before, $ob_level_after );
+		$this->assertFalse( csme_should_set_up_cross_origin_isolation() );
 	}
 
 	/**
@@ -41,11 +36,7 @@ class Test_Cross_Origin_Isolation extends WP_UnitTestCase {
 		// Ensure no screen is set.
 		$GLOBALS['current_screen'] = null;
 
-		$ob_level_before = ob_get_level();
-		csme_set_up_cross_origin_isolation();
-		$ob_level_after = ob_get_level();
-
-		$this->assertSame( $ob_level_before, $ob_level_after );
+		$this->assertFalse( csme_should_set_up_cross_origin_isolation() );
 	}
 
 	/**
@@ -57,11 +48,7 @@ class Test_Cross_Origin_Isolation extends WP_UnitTestCase {
 		// Set up a non-editor screen.
 		set_current_screen( 'options-general' );
 
-		$ob_level_before = ob_get_level();
-		csme_set_up_cross_origin_isolation();
-		$ob_level_after = ob_get_level();
-
-		$this->assertSame( $ob_level_before, $ob_level_after );
+		$this->assertFalse( csme_should_set_up_cross_origin_isolation() );
 	}
 
 	/**
@@ -76,11 +63,7 @@ class Test_Cross_Origin_Isolation extends WP_UnitTestCase {
 		// Simulate a third-party page builder action.
 		$_GET['action'] = 'elementor';
 
-		$ob_level_before = ob_get_level();
-		csme_set_up_cross_origin_isolation();
-		$ob_level_after = ob_get_level();
-
-		$this->assertSame( $ob_level_before, $ob_level_after );
+		$this->assertFalse( csme_should_set_up_cross_origin_isolation() );
 	}
 
 	/**
@@ -96,11 +79,7 @@ class Test_Cross_Origin_Isolation extends WP_UnitTestCase {
 		// Ensure no user is logged in.
 		wp_set_current_user( 0 );
 
-		$ob_level_before = ob_get_level();
-		csme_set_up_cross_origin_isolation();
-		$ob_level_after = ob_get_level();
-
-		$this->assertSame( $ob_level_before, $ob_level_after );
+		$this->assertFalse( csme_should_set_up_cross_origin_isolation() );
 	}
 
 	/**
@@ -117,38 +96,54 @@ class Test_Cross_Origin_Isolation extends WP_UnitTestCase {
 		$user_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
 		wp_set_current_user( $user_id );
 
-		$ob_level_before = ob_get_level();
-		csme_set_up_cross_origin_isolation();
-		$ob_level_after = ob_get_level();
-
-		$this->assertSame( $ob_level_before, $ob_level_after );
+		$this->assertFalse( csme_should_set_up_cross_origin_isolation() );
 	}
 
 	/**
-	 * Proceeds (starts output buffer) when all conditions are met.
+	 * Sends the headers without buffering under credentialless (Firefox),
+	 * where no crossorigin attributes are needed.
 	 *
 	 * @runInSeparateProcess
 	 * @preserveGlobalState disabled
 	 */
-	public function test_starts_output_buffer_when_all_conditions_met() {
-		add_filter( 'csme_use_coep_coop', '__return_true' );
+	public function test_sends_headers_without_buffer_under_credentialless() {
+		global $is_safari;
+		$is_safari = false;
 
-		// Set up a post edit screen.
+		add_filter( 'csme_use_coep_coop', '__return_true' );
 		set_current_screen( 'post' );
 		$_GET['action'] = 'edit';
-
-		// Create an editor (has upload_files cap).
-		$user_id = self::factory()->user->create( array( 'role' => 'editor' ) );
-		wp_set_current_user( $user_id );
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
 
 		$ob_level_before = ob_get_level();
+
+		$this->assertTrue( csme_should_set_up_cross_origin_isolation() );
 		csme_set_up_cross_origin_isolation();
-		$ob_level_after = ob_get_level();
+		$this->assertSame( $ob_level_before, ob_get_level(), 'No output buffer should be started under credentialless.' );
+	}
 
-		$this->assertSame( $ob_level_before + 1, $ob_level_after );
+	/**
+	 * Sends the headers and starts the crossorigin output buffer under
+	 * require-corp (Safari).
+	 *
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_starts_output_buffer_under_require_corp() {
+		global $is_safari;
+		$is_safari = true;
 
-		// Clean up the output buffer without invoking the callback
-		// (which would call header() and fail since output already started).
+		add_filter( 'csme_use_coep_coop', '__return_true' );
+		set_current_screen( 'post' );
+		$_GET['action'] = 'edit';
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
+		$ob_level_before = ob_get_level();
+
+		$this->assertTrue( csme_should_set_up_cross_origin_isolation() );
+		csme_set_up_cross_origin_isolation();
+		$this->assertSame( $ob_level_before + 1, ob_get_level(), 'The crossorigin output buffer should be started under require-corp.' );
+
 		while ( ob_get_level() > $ob_level_before ) {
 			ob_end_clean();
 		}

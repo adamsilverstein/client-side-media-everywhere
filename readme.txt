@@ -3,7 +3,7 @@ Contributors: adamsilverstein
 Tags: media, safari, firefox, performance, cross-origin
 Requires at least: 6.8
 Tested up to: 7.1
-Stable tag: 1.1.1
+Stable tag: 1.2.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -31,7 +31,7 @@ This plugin restores support for Firefox and Safari by sending the older COEP/CO
 **Under the hood:**
 
 * Sends `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: credentialless` (or `require-corp` on Safari) headers in the block editor.
-* Adds `crossorigin="anonymous"` attributes to cross-origin resources.
+* On Safari (`require-corp`), adds `crossorigin="anonymous"` to cross-origin images, scripts, styles, audio, and video so they can load through CORS. On Firefox (`credentialless`) nothing is added, because those resources already load without it and the attribute would break any host without CORS headers.
 * Adds `credentialless` attribute to iframes so they continue working under COEP.
 * Filters embed previews for providers that do not support credentialless iframes (Facebook, SmugMug).
 
@@ -50,7 +50,7 @@ Only browsers that receive the COEP/COOP headers are affected - Firefox, Safari,
 What can break on those screens:
 
 * **oEmbed previews.** Embeds are iframed. Under `credentialless` (Firefox, Chrome < 137) the plugin adds the `credentialless` attribute so they still load, but without cookies - embeds that need a logged-in session render logged-out or not at all. Facebook and SmugMug do not work with credentialless iframes, so their live previews are disabled in the editor and the placeholder is shown instead. Safari does not support `credentialless` at all, so under `require-corp` any embed whose provider does not send its own COEP header is blocked outright.
-* **Media served from third-party origins.** Images, video, audio, and fonts loaded into the editor from a CDN or another domain must opt in with `Cross-Origin-Resource-Policy`. Under `credentialless` they load but without credentials, so anything behind a signed cookie fails. Under `require-corp` (Safari) they are blocked unless the server sends CORP - the plugin adds `crossorigin="anonymous"` to cross-origin images to give them a CORS path instead, which only helps if the server sends `Access-Control-Allow-Origin`.
+* **Media served from third-party origins.** Images, video, audio, and fonts loaded into the editor from a CDN or another domain must opt in with `Cross-Origin-Resource-Policy`. Under `credentialless` they load but without credentials, so anything behind a signed cookie fails. Under `require-corp` (Safari) they are blocked unless the server sends CORP - the plugin adds `crossorigin="anonymous"` to cross-origin images, scripts, styles, audio, and video to give them a CORS path instead, which only helps if the server sends `Access-Control-Allow-Origin`.
 * **Popup-based authentication.** `Cross-Origin-Opener-Policy: same-origin` severs the `window.opener` link to cross-origin popups. Plugins that connect to an external service by opening an OAuth popup and waiting for it to call back into the opener will hang.
 * **Plugins that load editor assets cross-origin.** Any third-party script, stylesheet, or font pulled into the editor from another origin is subject to the same rules.
 * **The classic block.** The classic block and other TinyMCE-based UIs commonly load third-party assets, and are a frequent place for the failures above to surface.
@@ -90,6 +90,11 @@ To keep the plugin active but suppress the headers programmatically (for example
 WordPress 7.1 converts HEIC images client-side where possible and server-side otherwise. This plugin no longer includes any HEIC handling of its own.
 
 == Changelog ==
+
+= 1.2.0 =
+* The plugin now adds `crossorigin="anonymous"` itself, only on Safari (`require-corp`), instead of relying on the WordPress core function that is being removed. Covers images, scripts, styles, audio, video, and the audio or video parent of a cross-origin `<source>`, without seeking backwards through the document.
+* Stopped adding `crossorigin="anonymous"` on Firefox and Chrome below 137 (`credentialless`). Cross-origin resources already load there without it, and the attribute was breaking media served from hosts without CORS headers.
+* The COEP/COOP headers are sent directly instead of from an output buffer callback.
 
 = 1.1.1 =
 * Reworked the description to open with a plain explanation of what the plugin does, instead of leading with wasm-vips, Document-Isolation-Policy and COEP/COOP. The technical explanation is still there, further down.

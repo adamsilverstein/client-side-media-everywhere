@@ -59,41 +59,57 @@ function csme_get_coep_mode() {
 }
 
 /**
- * Sets up cross-origin isolation via COEP/COOP on relevant admin screens.
+ * Whether the current request should get COEP/COOP cross-origin isolation.
  *
- * Hooked at priority 20 so it runs after Gutenberg/core's own hooks.
+ * @since 1.2.0
+ *
+ * @return bool
  */
-function csme_set_up_cross_origin_isolation() {
+function csme_should_set_up_cross_origin_isolation() {
 	if ( ! csme_should_use_coep_coop() ) {
-		return;
+		return false;
 	}
 
 	$screen = get_current_screen();
 
 	if ( ! $screen ) {
-		return;
+		return false;
 	}
 
 	if ( ! $screen->is_block_editor() && 'site-editor' !== $screen->id && ! ( 'widgets' === $screen->id && wp_use_widgets_block_editor() ) ) {
-		return;
+		return false;
 	}
 
 	// Skip when a third-party page builder overrides the block editor.
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 	if ( isset( $_GET['action'] ) && 'edit' !== $_GET['action'] ) {
-		return;
+		return false;
 	}
 
 	$user_id = get_current_user_id();
 	if ( ! $user_id ) {
+		return false;
+	}
+
+	return user_can( $user_id, 'upload_files' );
+}
+
+/**
+ * Sets up cross-origin isolation via COEP/COOP on relevant admin screens.
+ *
+ * Sends the headers, and under require-corp (Safari) also starts the
+ * output buffer that adds crossorigin attributes.
+ *
+ * Hooked at priority 20 so it runs after Gutenberg/core's own hooks.
+ */
+function csme_set_up_cross_origin_isolation() {
+	if ( ! csme_should_set_up_cross_origin_isolation() ) {
 		return;
 	}
 
-	if ( ! user_can( $user_id, 'upload_files' ) ) {
-		return;
+	if ( 'require-corp' === csme_send_coep_coop_headers() ) {
+		csme_start_crossorigin_output_buffer();
 	}
-
-	csme_start_coep_coop_output_buffer();
 }
 
 add_action( 'load-post.php', 'csme_set_up_cross_origin_isolation', 20 );
@@ -102,78 +118,187 @@ add_action( 'load-site-editor.php', 'csme_set_up_cross_origin_isolation', 20 );
 add_action( 'load-widgets.php', 'csme_set_up_cross_origin_isolation', 20 );
 
 /**
- * Starts an output buffer that sends COEP/COOP headers and adds crossorigin attributes.
+ * Sends the COOP and COEP headers for cross-origin isolation.
+ *
+ * @since 1.2.0
  *
  * @link https://web.dev/coop-coep/
+ *
+ * @return string The COEP mode that was sent: 'require-corp' or 'credentialless'.
  */
-function csme_start_coep_coop_output_buffer() {
+function csme_send_coep_coop_headers() {
+	$coep = csme_get_coep_mode();
+
+	header( 'Cross-Origin-Opener-Policy: same-origin' );
+	header( 'Cross-Origin-Embedder-Policy: ' . $coep );
+
+	return $coep;
+}
+
+/**
+ * Starts an output buffer that adds crossorigin="anonymous" to cross-origin resources.
+ *
+ * Only useful under `require-corp` (Safari). That mode blocks every
+ * cross-origin resource that does not send `Cross-Origin-Resource-Policy`,
+ * and a CORS request via `crossorigin="anonymous"` is the only other way
+ * for it to load. Under `credentialless` (Firefox, Chrome < 137) cross-origin
+ * resources already load without credentials, and forcing CORS mode would
+ * break any of them served without `Access-Control-Allow-Origin`.
+ *
+ * @since 1.2.0
+ */
+function csme_start_crossorigin_output_buffer() {
 	ob_start(
 		function ( $output ) {
-			$coep = csme_get_coep_mode();
-			header( 'Cross-Origin-Opener-Policy: same-origin' );
-			header( 'Cross-Origin-Embedder-Policy: ' . $coep );
-
-			// Let core/Gutenberg handle AUDIO, LINK, SCRIPT, VIDEO, SOURCE.
-			if ( function_exists( 'wp_add_crossorigin_attributes' ) ) {
-				$output = wp_add_crossorigin_attributes( $output );
-			} elseif ( function_exists( 'gutenberg_add_crossorigin_attributes' ) ) {
-				$output = gutenberg_add_crossorigin_attributes( $output );
-			}
-
-			/*
-			 * Under require-corp (Safari), cross-origin images without CORP
-			 * headers are blocked, and a CORS request via
-			 * crossorigin="anonymous" is their only chance to load. Under
-			 * credentialless (Firefox), no-cors images already load fine,
-			 * and forcing CORS mode would break images from servers that
-			 * do not send Access-Control-Allow-Origin.
-			 */
-			if ( 'require-corp' === $coep ) {
-				$output = csme_add_crossorigin_to_images( $output );
-			}
-
-			return $output;
+			return csme_add_crossorigin_attributes( $output );
 		}
 	);
 }
 
 /**
- * Adds crossorigin="anonymous" to cross-origin IMG tags.
+ * Adds crossorigin="anonymous" to cross-origin resources in an HTML document.
  *
- * Core/Gutenberg removed IMG from the elements receiving crossorigin
- * attributes (see Gutenberg#76618). Under require-corp isolation images
- * still need the attribute, so this plugin adds it back for IMG only.
+ * Covers IMG (src and srcset), SCRIPT, LINK, AUDIO and VIDEO (src and
+ * poster), and the AUDIO or VIDEO parent of a cross-origin SOURCE. The
+ * attribute goes on the media element, never on the SOURCE itself.
  *
- * @since 1.1.0
+ * The HTML API's tag processor has no tree, so a media element is treated
+ * as open until its own closing tag or the first tag that is not SOURCE or
+ * TRACK, whichever comes first. The HTML spec requires SOURCE and TRACK
+ * children to come before any other content, so this bounds the source
+ * list exactly, including when the media element is closed implicitly.
+ *
+ * Parents are marked in a second forward pass instead of seeking backwards,
+ * which keeps the work at two scans in the worst case and never trips the
+ * tag processor's seek budget.
+ *
+ * @since 1.2.0
  *
  * @param string $html HTML input.
  * @return string Modified HTML.
  */
-function csme_add_crossorigin_to_images( $html ) {
+function csme_add_crossorigin_attributes( $html ) {
 	if ( ! class_exists( 'WP_HTML_Tag_Processor' ) ) {
 		return $html;
 	}
 
 	$site_url = site_url();
 
+	$url_attributes = array(
+		'AUDIO'  => array( 'src' ),
+		'IMG'    => array( 'src', 'srcset' ),
+		'LINK'   => array( 'href' ),
+		'SCRIPT' => array( 'src' ),
+		'SOURCE' => array( 'src' ),
+		'VIDEO'  => array( 'src', 'poster' ),
+	);
+
 	$processor = new WP_HTML_Tag_Processor( $html );
 
-	while ( $processor->next_tag( array( 'tag_name' => 'IMG' ) ) ) {
+	// Ordinal of the last AUDIO or VIDEO opener seen, counting from 1.
+	$media_count = 0;
+	// Ordinal of the media element whose source list is still open, or 0.
+	$open_media = 0;
+	// Whether that media element already carries a crossorigin attribute.
+	$open_media_marked = false;
+	// Ordinals of media elements to mark in the second pass.
+	$parents_to_mark = array();
+
+	while ( $processor->next_tag( array( 'tag_closers' => 'visit' ) ) ) {
+		$tag      = $processor->get_tag();
+		$is_media = 'AUDIO' === $tag || 'VIDEO' === $tag;
+
+		if ( $processor->is_tag_closer() ) {
+			if ( $is_media ) {
+				$open_media = 0;
+			}
+			continue;
+		}
+
+		if ( 'SOURCE' !== $tag && 'TRACK' !== $tag ) {
+			$open_media = 0;
+		}
+
+		if ( $is_media ) {
+			++$media_count;
+			$open_media        = $media_count;
+			$open_media_marked = null !== $processor->get_attribute( 'crossorigin' );
+		}
+
+		if ( ! isset( $url_attributes[ $tag ] ) ) {
+			continue;
+		}
+
+		if ( 'SOURCE' === $tag ) {
+			if ( 0 === $open_media || $open_media_marked ) {
+				continue;
+			}
+			if ( csme_has_cross_origin_url( $processor, $url_attributes[ $tag ], $site_url ) ) {
+				$parents_to_mark[ $open_media ] = true;
+				$open_media_marked              = true;
+			}
+			continue;
+		}
+
 		if ( null !== $processor->get_attribute( 'crossorigin' ) ) {
 			continue;
 		}
 
-		$urls = array();
+		if ( csme_has_cross_origin_url( $processor, $url_attributes[ $tag ], $site_url ) ) {
+			$processor->set_attribute( 'crossorigin', 'anonymous' );
+			if ( $is_media ) {
+				$open_media_marked = true;
+			}
+		}
+	}
 
-		$src = $processor->get_attribute( 'src' );
-		if ( is_string( $src ) ) {
-			$urls[] = $src;
+	$html = $processor->get_updated_html();
+
+	if ( empty( $parents_to_mark ) ) {
+		return $html;
+	}
+
+	$processor   = new WP_HTML_Tag_Processor( $html );
+	$media_count = 0;
+
+	while ( $processor->next_tag() ) {
+		$tag = $processor->get_tag();
+		if ( 'AUDIO' !== $tag && 'VIDEO' !== $tag ) {
+			continue;
+		}
+		++$media_count;
+		if ( isset( $parents_to_mark[ $media_count ] ) ) {
+			$processor->set_attribute( 'crossorigin', 'anonymous' );
+		}
+	}
+
+	return $processor->get_updated_html();
+}
+
+/**
+ * Whether any of the given attributes on the current tag holds a cross-origin URL.
+ *
+ * A `srcset` attribute is split into its candidates, each of which is a URL
+ * optionally followed by a descriptor.
+ *
+ * @since 1.2.0
+ *
+ * @param WP_HTML_Tag_Processor $processor  Processor positioned on a tag.
+ * @param string[]              $attributes Attribute names holding URLs.
+ * @param string                $site_url   The site URL.
+ * @return bool Whether a cross-origin URL was found.
+ */
+function csme_has_cross_origin_url( $processor, $attributes, $site_url ) {
+	foreach ( $attributes as $attribute ) {
+		$value = $processor->get_attribute( $attribute );
+		if ( ! is_string( $value ) || '' === $value ) {
+			continue;
 		}
 
-		// Each srcset candidate is a URL optionally followed by a descriptor.
-		$srcset = $processor->get_attribute( 'srcset' );
-		if ( is_string( $srcset ) ) {
-			foreach ( explode( ',', $srcset ) as $candidate ) {
+		$urls = array( $value );
+		if ( 'srcset' === $attribute ) {
+			$urls = array();
+			foreach ( explode( ',', $value ) as $candidate ) {
 				$candidate = trim( $candidate );
 				if ( '' !== $candidate ) {
 					$parts  = preg_split( '/\s+/', $candidate );
@@ -184,13 +309,12 @@ function csme_add_crossorigin_to_images( $html ) {
 
 		foreach ( $urls as $url ) {
 			if ( csme_is_cross_origin_url( $url, $site_url ) ) {
-				$processor->set_attribute( 'crossorigin', 'anonymous' );
-				break;
+				return true;
 			}
 		}
 	}
 
-	return $processor->get_updated_html();
+	return false;
 }
 
 /**

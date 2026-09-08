@@ -2,8 +2,8 @@
  * Cross-origin isolation support for COEP/COOP mode.
  *
  * Handles credentialless iframes, crossorigin attributes on dynamically
- * added elements, and embed preview filtering for browsers using
- * COEP/COOP-based cross-origin isolation.
+ * added elements (require-corp only), and embed preview filtering for
+ * browsers using COEP/COOP-based cross-origin isolation.
  *
  * Only runs when the page is cross-origin isolated via COEP/COOP
  * (indicated by the __coepCoopIsolation flag set by the PHP side).
@@ -19,22 +19,21 @@
 	/**
 	 * Adds crossorigin="anonymous" and credentialless attributes to elements.
 	 *
-	 * IMG elements only get the attribute under require-corp (Safari):
-	 * crossorigin="anonymous" forces CORS-mode fetches, which breaks
-	 * cross-origin images from servers without CORS headers. Under
-	 * credentialless those images load fine without the attribute.
+	 * The crossorigin attribute is only added under require-corp (Safari),
+	 * where cross-origin resources without a Cross-Origin-Resource-Policy
+	 * header are blocked and a CORS request is their only way to load.
+	 * Under credentialless (Firefox, Chrome < 137) those resources already
+	 * load without credentials, and forcing CORS mode would break any of
+	 * them served without Access-Control-Allow-Origin.
 	 *
 	 * @param {Element} el The element to modify.
 	 */
 	function addCrossOriginAttributes( el ) {
 		if (
-			el.nodeName === 'IMG' &&
-			window.__coepMode !== 'require-corp'
+			el.nodeName !== 'IFRAME' &&
+			window.__coepMode === 'require-corp' &&
+			! el.hasAttribute( 'crossorigin' )
 		) {
-			return;
-		}
-
-		if ( ! el.hasAttribute( 'crossorigin' ) ) {
 			el.setAttribute( 'crossorigin', 'anonymous' );
 		}
 

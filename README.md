@@ -23,7 +23,7 @@ However, Firefox and Safari do not yet support DIP, and neither does Chrome befo
 This plugin restores support by sending the older COEP/COOP headers on browsers where DIP is not available:
 
 - Sends `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: credentialless` (or `require-corp` on Safari) headers in the block editor.
-- Adds `crossorigin="anonymous"` attributes to cross-origin resources.
+- On Safari (`require-corp`), adds `crossorigin="anonymous"` to cross-origin images, scripts, styles, audio, and video so they can load through CORS. On Firefox (`credentialless`) nothing is added, because those resources already load without it and the attribute would break any host without CORS headers.
 - Adds `credentialless` attribute to iframes so they continue working under COEP.
 - Filters embed previews for providers that do not support credentialless iframes (Facebook, SmugMug).
 
@@ -36,7 +36,7 @@ Cross-origin isolation is a security boundary. It works by making the browser re
 What can break on those screens:
 
 - **oEmbed previews.** Embeds are iframed. Under `credentialless` (Firefox, Chrome < 137) the plugin adds the `credentialless` attribute so they still load, but without cookies - embeds that need a logged-in session render logged-out or not at all. Facebook and SmugMug do not work with credentialless iframes, so their live previews are disabled in the editor and the placeholder is shown instead. Safari does not support `credentialless` at all, so under `require-corp` any embed whose provider does not send its own COEP header is blocked outright.
-- **Media served from third-party origins.** Images, video, audio, and fonts loaded into the editor from a CDN or another domain must opt in with `Cross-Origin-Resource-Policy`. Under `credentialless` they load but without credentials, so anything behind a signed cookie fails. Under `require-corp` (Safari) they are blocked unless the server sends CORP - the plugin adds `crossorigin="anonymous"` to cross-origin images to give them a CORS path instead, which only helps if the server sends `Access-Control-Allow-Origin`.
+- **Media served from third-party origins.** Images, video, audio, and fonts loaded into the editor from a CDN or another domain must opt in with `Cross-Origin-Resource-Policy`. Under `credentialless` they load but without credentials, so anything behind a signed cookie fails. Under `require-corp` (Safari) they are blocked unless the server sends CORP - the plugin adds `crossorigin="anonymous"` to cross-origin images, scripts, styles, audio, and video to give them a CORS path instead, which only helps if the server sends `Access-Control-Allow-Origin`.
 - **Popup-based authentication.** `Cross-Origin-Opener-Policy: same-origin` severs the `window.opener` link to cross-origin popups. Plugins that connect to an external service by opening an OAuth popup and waiting for it to call back into the opener will hang.
 - **Plugins that load editor assets cross-origin.** Any third-party script, stylesheet, or font pulled into the editor from another origin is subject to the same rules.
 - **The classic block.** The classic block and other TinyMCE-based UIs commonly load third-party assets, and are a frequent place for the failures above to surface.
