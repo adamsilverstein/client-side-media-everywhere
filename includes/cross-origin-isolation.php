@@ -204,6 +204,12 @@ function csme_add_crossorigin_attributes( $html ) {
 	// Ordinals of media elements to mark in the second pass.
 	$parents_to_mark = array();
 
+	/*
+	 * Enter a media element on its opening tag and reset on its closing tag,
+	 * so a source list belongs to exactly one parent. That reset is the only
+	 * reason closing tags are visited: without it a SOURCE appearing after
+	 * </video> would still look like a child of that video.
+	 */
 	while ( $processor->next_tag( array( 'tag_closers' => 'visit' ) ) ) {
 		$tag      = $processor->get_tag();
 		$is_media = 'AUDIO' === $tag || 'VIDEO' === $tag;
