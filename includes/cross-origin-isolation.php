@@ -159,8 +159,11 @@ function csme_start_crossorigin_output_buffer() {
  * Adds crossorigin="anonymous" to cross-origin resources in an HTML document.
  *
  * Covers IMG (src and srcset), SCRIPT, LINK, AUDIO and VIDEO (src and
- * poster), and the AUDIO or VIDEO parent of a cross-origin SOURCE. The
- * attribute goes on the media element, never on the SOURCE itself.
+ * poster), the AUDIO or VIDEO parent of a cross-origin SOURCE, and the IMG
+ * of a PICTURE whose SOURCE holds a cross-origin candidate. The attribute
+ * never goes on the SOURCE itself, which has none of its own: the media
+ * element governs its source list, and the IMG carries whichever PICTURE
+ * candidate the browser selects.
  *
  * The HTML API's tag processor has no tree, so a media element is treated
  * as open until its own closing tag or the first tag that is not SOURCE or
@@ -189,7 +192,7 @@ function csme_add_crossorigin_attributes( $html ) {
 		'IMG'    => array( 'src', 'srcset' ),
 		'LINK'   => array( 'href' ),
 		'SCRIPT' => array( 'src' ),
-		'SOURCE' => array( 'src' ),
+		'SOURCE' => array( 'src', 'srcset' ),
 		'VIDEO'  => array( 'src', 'poster' ),
 	);
 
@@ -203,6 +206,10 @@ function csme_add_crossorigin_attributes( $html ) {
 	$open_media_marked = false;
 	// Ordinals of media elements to mark in the second pass.
 	$parents_to_mark = array();
+	// Whether the cursor is inside a PICTURE element.
+	$in_picture = false;
+	// Whether a SOURCE in that PICTURE held a cross-origin candidate.
+	$picture_needs_mark = false;
 
 	/*
 	 * Enter a media element on its opening tag and reset on its closing tag,
@@ -218,11 +225,25 @@ function csme_add_crossorigin_attributes( $html ) {
 			if ( $is_media ) {
 				$open_media = 0;
 			}
+			if ( 'PICTURE' === $tag ) {
+				$in_picture         = false;
+				$picture_needs_mark = false;
+			}
 			continue;
 		}
 
 		if ( 'SOURCE' !== $tag && 'TRACK' !== $tag ) {
 			$open_media = 0;
+		}
+
+		// A PICTURE holds only SOURCE and IMG, so anything else ends it.
+		if ( 'SOURCE' !== $tag && 'IMG' !== $tag ) {
+			$in_picture         = false;
+			$picture_needs_mark = false;
+		}
+
+		if ( 'PICTURE' === $tag ) {
+			$in_picture = true;
 		}
 
 		if ( $is_media ) {
@@ -236,12 +257,25 @@ function csme_add_crossorigin_attributes( $html ) {
 		}
 
 		if ( 'SOURCE' === $tag ) {
-			if ( 0 === $open_media || $open_media_marked ) {
+			if ( 0 !== $open_media ) {
+				if ( $open_media_marked ) {
+					continue;
+				}
+				if ( csme_has_cross_origin_url( $processor, $url_attributes[ $tag ], $site_url ) ) {
+					$parents_to_mark[ $open_media ] = true;
+					$open_media_marked              = true;
+				}
 				continue;
 			}
-			if ( csme_has_cross_origin_url( $processor, $url_attributes[ $tag ], $site_url ) ) {
-				$parents_to_mark[ $open_media ] = true;
-				$open_media_marked              = true;
+
+			/*
+			 * Inside a PICTURE the candidates belong to the IMG that follows
+			 * them: the browser applies whichever it picks to that element, so
+			 * the IMG is what carries the attribute. A SOURCE with no media or
+			 * picture parent has nothing to mark.
+			 */
+			if ( $in_picture && ! $picture_needs_mark && csme_has_cross_origin_url( $processor, $url_attributes[ $tag ], $site_url ) ) {
+				$picture_needs_mark = true;
 			}
 			continue;
 		}
@@ -250,7 +284,19 @@ function csme_add_crossorigin_attributes( $html ) {
 			continue;
 		}
 
-		if ( csme_has_cross_origin_url( $processor, $url_attributes[ $tag ], $site_url ) ) {
+		$needs_mark = csme_has_cross_origin_url( $processor, $url_attributes[ $tag ], $site_url );
+
+		/*
+		 * The IMG closes out its PICTURE, whether or not its own fallback is
+		 * cross-origin: a same-origin fallback next to a cross-origin AVIF
+		 * candidate still needs the attribute for that candidate to load.
+		 */
+		if ( 'IMG' === $tag && $picture_needs_mark ) {
+			$needs_mark         = true;
+			$picture_needs_mark = false;
+		}
+
+		if ( $needs_mark ) {
 			$processor->set_attribute( 'crossorigin', 'anonymous' );
 			if ( $is_media ) {
 				$open_media_marked = true;

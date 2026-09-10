@@ -217,7 +217,10 @@ class Test_Add_Crossorigin_Attributes extends WP_UnitTestCase {
 		$html   = '<div><video><source src="/a.mp4"></div><picture><source srcset="https://cdn.example.com/i.avif"><img src="/i.jpg"></picture>';
 		$result = csme_add_crossorigin_attributes( $html );
 
-		$this->assertSame( $html, $result );
+		$this->assertSame(
+			'<div><video><source src="/a.mp4"></div><picture><source srcset="https://cdn.example.com/i.avif"><img crossorigin="anonymous" src="/i.jpg"></picture>',
+			$result
+		);
 	}
 
 	/**
@@ -231,10 +234,96 @@ class Test_Add_Crossorigin_Attributes extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A SOURCE outside any media element marks nothing.
+	 * A SOURCE with neither a media nor a picture parent marks nothing.
 	 */
 	public function test_source_outside_media_element_marks_nothing() {
-		$html   = '<picture><source srcset="https://cdn.example.com/i.avif"><img src="/i.jpg"></picture><audio src="/l.mp3"></audio>';
+		$html   = '<div><source srcset="https://cdn.example.com/i.avif"></div><audio src="/l.mp3"></audio>';
+		$result = csme_add_crossorigin_attributes( $html );
+
+		$this->assertSame( $html, $result );
+	}
+
+	/**
+	 * A cross-origin PICTURE candidate marks the IMG that carries it.
+	 *
+	 * The browser applies whichever SOURCE candidate it picks to the IMG, so
+	 * that element needs the attribute even when its own fallback is
+	 * same-origin. Without it the chosen candidate is blocked under
+	 * require-corp.
+	 */
+	public function test_picture_source_marks_the_img() {
+		$result = csme_add_crossorigin_attributes(
+			'<picture><source srcset="https://cdn.example.com/i.avif" type="image/avif"><img src="/i.jpg"></picture>'
+		);
+
+		$this->assertSame(
+			'<picture><source srcset="https://cdn.example.com/i.avif" type="image/avif"><img crossorigin="anonymous" src="/i.jpg"></picture>',
+			$result
+		);
+	}
+
+	/**
+	 * A same-origin PICTURE marks nothing.
+	 */
+	public function test_same_origin_picture_marks_nothing() {
+		$html   = '<picture><source srcset="/i.avif"><img src="/i.jpg"></picture>';
+		$result = csme_add_crossorigin_attributes( $html );
+
+		$this->assertSame( $html, $result );
+	}
+
+	/**
+	 * A cross-origin candidate on any SOURCE in the list marks the IMG once.
+	 */
+	public function test_picture_marks_img_once_for_any_cross_origin_source() {
+		$result = csme_add_crossorigin_attributes(
+			'<picture><source srcset="/a.avif"><source srcset="https://cdn.example.com/b.webp"><img src="https://cdn.example.com/i.jpg"></picture>'
+		);
+
+		$this->assertSame( 1, substr_count( $result, 'crossorigin' ) );
+		$this->assertStringContainsString( '<img crossorigin="anonymous"', $result );
+	}
+
+	/**
+	 * A multi-candidate srcset is read past its descriptors.
+	 */
+	public function test_picture_reads_srcset_descriptors() {
+		$result = csme_add_crossorigin_attributes(
+			'<picture><source srcset="https://cdn.example.com/i.avif 2x, /small.jpg 1x"><img src="/i.jpg"></picture>'
+		);
+
+		$this->assertStringContainsString( '<img crossorigin="anonymous"', $result );
+	}
+
+	/**
+	 * An IMG that already carries the attribute is left alone.
+	 */
+	public function test_picture_does_not_overwrite_existing_crossorigin() {
+		$html   = '<picture><source srcset="https://cdn.example.com/i.avif"><img crossorigin="use-credentials" src="/i.jpg"></picture>';
+		$result = csme_add_crossorigin_attributes( $html );
+
+		$this->assertSame( $html, $result );
+	}
+
+	/**
+	 * One picture's cross-origin candidate does not mark the next picture's IMG.
+	 */
+	public function test_picture_state_does_not_leak_to_the_next_picture() {
+		$result = csme_add_crossorigin_attributes(
+			'<picture><source srcset="https://cdn.example.com/a.avif"><img src="/a.jpg"></picture><picture><source srcset="/b.avif"><img src="/b.jpg"></picture>'
+		);
+
+		$this->assertSame(
+			'<picture><source srcset="https://cdn.example.com/a.avif"><img crossorigin="anonymous" src="/a.jpg"></picture><picture><source srcset="/b.avif"><img src="/b.jpg"></picture>',
+			$result
+		);
+	}
+
+	/**
+	 * An IMG after the picture closes is not marked by its candidates.
+	 */
+	public function test_img_after_picture_close_is_not_marked() {
+		$html   = '<picture><source srcset="https://cdn.example.com/a.avif"></picture><img src="/later.jpg">';
 		$result = csme_add_crossorigin_attributes( $html );
 
 		$this->assertSame( $html, $result );
