@@ -17,6 +17,36 @@
 	}
 
 	/**
+	 * Resolves which element should carry the crossorigin attribute.
+	 *
+	 * A SOURCE element has no crossorigin attribute of its own: the owning
+	 * AUDIO or VIDEO element governs the fetch for every candidate in its
+	 * source list, so the attribute goes on the media parent and setting it
+	 * on the SOURCE does nothing. A SOURCE with no media parent, eg. inside
+	 * a PICTURE, is left alone, matching csme_add_crossorigin_attributes().
+	 *
+	 * @param {Element} el The element that matched.
+	 * @return {Element|null} The element to mark, or null when there is none.
+	 */
+	function resolveCrossOriginTarget( el ) {
+		if ( el.nodeName !== 'SOURCE' ) {
+			return el;
+		}
+
+		// SOURCE is always a direct child of the element that owns it.
+		var parent = el.parentNode;
+
+		if (
+			parent &&
+			( parent.nodeName === 'AUDIO' || parent.nodeName === 'VIDEO' )
+		) {
+			return parent;
+		}
+
+		return null;
+	}
+
+	/**
 	 * Adds crossorigin="anonymous" and credentialless attributes to elements.
 	 *
 	 * The crossorigin attribute is only added under require-corp (Safari),
@@ -31,10 +61,13 @@
 	function addCrossOriginAttributes( el ) {
 		if (
 			el.nodeName !== 'IFRAME' &&
-			window.__coepMode === 'require-corp' &&
-			! el.hasAttribute( 'crossorigin' )
+			window.__coepMode === 'require-corp'
 		) {
-			el.setAttribute( 'crossorigin', 'anonymous' );
+			var target = resolveCrossOriginTarget( el );
+
+			if ( target && ! target.hasAttribute( 'crossorigin' ) ) {
+				target.setAttribute( 'crossorigin', 'anonymous' );
+			}
 		}
 
 		// For iframes, add the credentialless attribute.
@@ -79,7 +112,7 @@
 					}
 
 					var children = el.querySelectorAll(
-						'img,source,script,video,link,iframe'
+						'audio,img,source,script,video,link,iframe'
 					);
 					for ( var j = 0; j < children.length; j++ ) {
 						addCrossOriginAttributes( children[ j ] );
@@ -120,6 +153,7 @@
 
 					if (
 						[
+							'AUDIO',
 							'IMG',
 							'SOURCE',
 							'SCRIPT',
