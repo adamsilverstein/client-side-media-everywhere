@@ -29,6 +29,87 @@ class Test_Add_Crossorigin_Attributes extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Origins that differ only subtly from the site are still cross-origin.
+	 *
+	 * A string prefix match reads https://example.com.cdn.net as same-origin
+	 * for a site at https://example.com, and misses a differing port, either
+	 * of which leaves the resource unmarked and blocked under require-corp.
+	 *
+	 * @dataProvider data_cross_origin_lookalikes
+	 *
+	 * @param string $url URL to check.
+	 */
+	public function test_adds_crossorigin_to_lookalike_origins( $url ) {
+		$result = csme_add_crossorigin_attributes( '<img src="' . $url . '" alt="photo">' );
+
+		$this->assertStringContainsString( 'crossorigin="anonymous"', $result );
+	}
+
+	/**
+	 * Data provider for origins that a prefix match would miss.
+	 *
+	 * @return array<string, array{string}>
+	 */
+	public function data_cross_origin_lookalikes() {
+		$site_url = site_url();
+		$host     = wp_parse_url( $site_url, PHP_URL_HOST );
+		$scheme   = wp_parse_url( $site_url, PHP_URL_SCHEME );
+
+		return array(
+			'host prefix'     => array( $site_url . '.cdn.net/photo.jpg' ),
+			'different port'  => array( $scheme . '://' . $host . ':8443/photo.jpg' ),
+			'different host'  => array( $scheme . '://cdn.example.net/photo.jpg' ),
+		);
+	}
+
+	/**
+	 * The site URL itself, with nothing after it, is same-origin.
+	 */
+	public function test_does_not_add_crossorigin_to_bare_site_url() {
+		$html   = '<img src="' . site_url() . '" alt="photo">';
+		$result = csme_add_crossorigin_attributes( $html );
+
+		$this->assertStringNotContainsString( 'crossorigin', $result );
+	}
+
+	/**
+	 * A query or fragment directly after the site URL stays same-origin.
+	 *
+	 * @dataProvider data_same_origin_boundaries
+	 *
+	 * @param string $url URL to check.
+	 */
+	public function test_does_not_add_crossorigin_at_url_boundaries( $url ) {
+		$result = csme_add_crossorigin_attributes( '<img src="' . $url . '" alt="photo">' );
+
+		$this->assertStringNotContainsString( 'crossorigin', $result );
+	}
+
+	/**
+	 * Data provider for same-origin boundary characters.
+	 *
+	 * @return array<string, array{string}>
+	 */
+	public function data_same_origin_boundaries() {
+		$site_url = site_url();
+
+		$host   = wp_parse_url( $site_url, PHP_URL_HOST );
+		$scheme = wp_parse_url( $site_url, PHP_URL_SCHEME );
+
+		return array(
+			'path'             => array( $site_url . '/photo.jpg' ),
+			'query'            => array( $site_url . '?p=1' ),
+			'fragment'         => array( $site_url . '#top' ),
+			// An explicit default port is the same origin as no port.
+			'default port'     => array( $scheme . '://' . $host . ( 'https' === $scheme ? ':443' : ':80' ) . '/photo.jpg' ),
+			// Outside the install directory, but still the site's own origin.
+			'sibling path'     => array( $scheme . '://' . $host . '/elsewhere/photo.jpg' ),
+			// Protocol-relative to the site's own host inherits its scheme.
+			'protocol relative' => array( '//' . $host . '/photo.jpg' ),
+		);
+	}
+
+	/**
 	 * Does not add crossorigin to a root-relative URL.
 	 */
 	public function test_does_not_add_crossorigin_to_relative_url() {

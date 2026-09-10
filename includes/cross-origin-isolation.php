@@ -324,11 +324,52 @@ function csme_has_cross_origin_url( $processor, $attributes, $site_url ) {
 }
 
 /**
+ * Returns the origin of a URL: scheme, host, and non-default port.
+ *
+ * A URL with no host, such as a root-relative, data, or blob URL, has no
+ * origin of its own and returns an empty string.
+ *
+ * @since 1.2.0
+ *
+ * @param string $url            URL to read.
+ * @param string $default_scheme Scheme to assume when the URL omits one,
+ *                               as protocol-relative URLs do.
+ * @return string The origin, or an empty string when the URL has no host.
+ */
+function csme_get_url_origin( $url, $default_scheme = '' ) {
+	$parts = wp_parse_url( $url );
+
+	if ( empty( $parts['host'] ) ) {
+		return '';
+	}
+
+	$scheme = isset( $parts['scheme'] ) ? strtolower( $parts['scheme'] ) : $default_scheme;
+	$host   = strtolower( $parts['host'] );
+	$port   = isset( $parts['port'] ) ? (int) $parts['port'] : 0;
+
+	// An explicit default port is the same origin as no port at all.
+	if ( ( 'http' === $scheme && 80 === $port ) || ( 'https' === $scheme && 443 === $port ) ) {
+		$port = 0;
+	}
+
+	return $scheme . '://' . $host . ( $port > 0 ? ':' . $port : '' );
+}
+
+/**
  * Whether a URL points to a different origin than the site.
  *
- * Root-relative URLs (a single leading slash) are same-origin;
- * protocol-relative URLs (double leading slash) are treated as
- * cross-origin, unlike core's check, which misclassifies them.
+ * Compares parsed origins rather than matching the site URL as a string
+ * prefix. A prefix match reads https://example.com.cdn.net as same-origin
+ * for a site at https://example.com, and misses a differing port, both of
+ * which would leave a cross-origin resource unmarked and blocked under
+ * require-corp. It also reads every URL outside the install directory as
+ * cross-origin on a site in a subdirectory.
+ *
+ * URLs with no host of their own are same-origin: root-relative URLs (a
+ * single leading slash) resolve against the site, and data or blob URLs
+ * are not fetched across the network. Protocol-relative URLs (a double
+ * leading slash) inherit the site's scheme, so only the host and port
+ * decide.
  *
  * @since 1.1.0
  *
@@ -337,9 +378,16 @@ function csme_has_cross_origin_url( $processor, $attributes, $site_url ) {
  * @return bool Whether the URL is cross-origin.
  */
 function csme_is_cross_origin_url( $url, $site_url ) {
-	$is_root_relative = str_starts_with( $url, '/' ) && ! str_starts_with( $url, '//' );
+	$site_parts  = wp_parse_url( $site_url );
+	$site_scheme = isset( $site_parts['scheme'] ) ? strtolower( $site_parts['scheme'] ) : '';
 
-	return ! str_starts_with( $url, $site_url ) && ! $is_root_relative;
+	$origin = csme_get_url_origin( $url, $site_scheme );
+
+	if ( '' === $origin ) {
+		return false;
+	}
+
+	return csme_get_url_origin( $site_url ) !== $origin;
 }
 
 /**
