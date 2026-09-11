@@ -9,6 +9,7 @@
 		<testsuite name="Client-Side Media Everywhere">
 			<directory suffix=".php">tests/</directory>
 			<exclude>tests/bootstrap.php</exclude>
+			<exclude>tests/e2e</exclude>
 		</testsuite>
 	</testsuites>
 

@@ -6,14 +6,9 @@
  */
 
 // Define plugin constants.
-define( 'CSME_VERSION', '1.1.1' );
+define( 'CSME_VERSION', '1.2.0' );
 define( 'CSME_PLUGIN_DIR', dirname( __DIR__ ) . '/' );
 define( 'CSME_PLUGIN_URL', 'http://example.org/wp-content/plugins/client-side-media-everywhere/' );
-
-// Stub the client-side media processing gate so the plugin file can load.
-function wp_is_client_side_media_processing_enabled() {
-	return true;
-}
 
 // Determine the WP tests directory.
 $_tests_dir = getenv( 'WP_TESTS_DIR' );
