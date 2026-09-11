@@ -75,6 +75,28 @@ class Test_Enqueue_Scripts extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Script declares every package it reaches for.
+	 *
+	 * The observer needs nothing, but the notice for media that cannot be
+	 * previewed renders components, dispatches to core/notices, and
+	 * translates its copy.
+	 */
+	public function test_script_declares_its_dependencies() {
+		add_filter( 'csme_use_coep_coop', '__return_true' );
+
+		csme_enqueue_scripts( 'post.php' );
+
+		$script = wp_scripts()->query( 'csme-cross-origin-isolation-coep' );
+
+		$this->assertNotFalse( $script );
+		$this->assertSame(
+			array( 'wp-block-editor', 'wp-components', 'wp-compose', 'wp-data', 'wp-element', 'wp-hooks', 'wp-i18n' ),
+			$script->deps
+		);
+		$this->assertSame( 'client-side-media-everywhere', $script->textdomain );
+	}
+
+	/**
 	 * Script is enqueued on post.php.
 	 */
 	public function test_script_enqueued_on_post_php() {

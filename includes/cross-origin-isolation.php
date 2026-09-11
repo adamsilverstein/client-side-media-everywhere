@@ -585,10 +585,12 @@ function csme_enqueue_scripts( $hook_suffix ) {
 	wp_enqueue_script(
 		'csme-cross-origin-isolation-coep',
 		CSME_PLUGIN_URL . 'js/cross-origin-isolation-coep.js',
-		array( 'wp-block-editor', 'wp-element', 'wp-hooks', 'wp-compose' ),
+		array( 'wp-block-editor', 'wp-components', 'wp-compose', 'wp-data', 'wp-element', 'wp-hooks', 'wp-i18n' ),
 		CSME_VERSION,
 		true
 	);
+
+	wp_set_script_translations( 'csme-cross-origin-isolation-coep', 'client-side-media-everywhere' );
 
 	// Flag so the script knows COEP/COOP isolation (not DIP) is active,
 	// and which COEP mode is in effect (require-corp vs credentialless).

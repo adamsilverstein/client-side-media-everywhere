@@ -124,6 +124,76 @@ test.describe( 'Cross-origin media in the editor canvas', () => {
 			.toBeGreaterThan( 0 );
 	} );
 
+	test( 'flags media that cannot be previewed and leaves rescuable media alone', async ( {
+		editor,
+		page,
+		browserName,
+	} ) => {
+		test.skip( browserName !== 'webkit', 'Only require-corp blocks media' );
+
+		await editor.insertBlock( {
+			name: 'core/image',
+			attributes: { url: NO_CORS_IMAGE, alt: 'Blocked image' },
+		} );
+		await editor.insertBlock( {
+			name: 'core/image',
+			attributes: { url: CORS_IMAGE, alt: 'Rescued image' },
+		} );
+
+		const blocked = editor.canvas.locator(
+			`img[src="${ NO_CORS_IMAGE }"]`
+		);
+		const rescued = editor.canvas.locator( `img[src="${ CORS_IMAGE }"]` );
+
+		await expect( blocked ).toHaveAttribute( 'data-csme-unpreviewable' );
+		await expect
+			.poll( () =>
+				rescued.evaluate( ( el: HTMLImageElement ) => el.naturalWidth )
+			)
+			.toBeGreaterThan( 0 );
+		await expect( rescued ).not.toHaveAttribute(
+			'data-csme-unpreviewable'
+		);
+
+		// The panel is drawn on the element itself and carries the short
+		// copy, XML-escaped inside an SVG, so match around the apostrophe.
+		const panel = await blocked.evaluate( ( el ) => {
+			const style = window.getComputedStyle( el );
+			return decodeURIComponent( style.content + style.backgroundImage );
+		} );
+		expect( panel ).toContain( 'be previewed in Safari.' );
+
+		// One editor notice explains it, however many elements are flagged.
+		await expect(
+			page.locator( '.components-notice' ).filter( {
+				hasText: "can't be previewed in Safari",
+			} )
+		).toHaveCount( 1 );
+
+		// The flagged block gets a notice in its inspector; the rescued one does not.
+		await editor.selectBlocks(
+			editor.canvas
+				.getByRole( 'document', { name: 'Block: Image' } )
+				.first()
+		);
+		await editor.openDocumentSettingsSidebar();
+		const inspector = page.getByRole( 'region', {
+			name: 'Editor settings',
+		} );
+		await expect(
+			inspector.getByText( "can't be previewed in Safari" )
+		).toBeVisible();
+
+		await editor.selectBlocks(
+			editor.canvas
+				.getByRole( 'document', { name: 'Block: Image' } )
+				.last()
+		);
+		await expect(
+			inspector.getByText( "can't be previewed in Safari" )
+		).toBeHidden();
+	} );
+
 	test( 'retries a blocked image a bounded number of times', async ( {
 		editor,
 		page,
