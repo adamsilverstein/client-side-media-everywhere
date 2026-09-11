@@ -24,6 +24,7 @@ This plugin restores support by sending the older COEP/COOP headers on browsers 
 
 - Sends `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: credentialless` (or `require-corp` on Safari) headers in the block editor.
 - On Safari (`require-corp`), adds `crossorigin="anonymous"` to cross-origin images, scripts, styles, audio, and video so they can load through CORS. On Firefox (`credentialless`) nothing is added, because those resources already load without it and the attribute would break any host without CORS headers.
+- Applies the same rule to the media library templates, whose URLs are only known at render time, so the media modal previews match the isolation mode on whichever WordPress version is running.
 - Adds `credentialless` attribute to iframes so they continue working under COEP.
 - Filters embed previews for providers that do not support credentialless iframes (Facebook, SmugMug).
 

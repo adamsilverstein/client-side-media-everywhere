@@ -97,8 +97,10 @@ function csme_should_set_up_cross_origin_isolation() {
 /**
  * Sets up cross-origin isolation via COEP/COOP on relevant admin screens.
  *
- * Sends the headers, and under require-corp (Safari) also starts the
- * output buffer that adds crossorigin attributes.
+ * Sends the headers, under require-corp (Safari) starts the output buffer
+ * that adds crossorigin attributes, and in both modes takes over the media
+ * templates so their attributes match the mode rather than whatever the
+ * running WordPress version decided.
  *
  * Hooked at priority 20 so it runs after Gutenberg/core's own hooks.
  */
@@ -107,9 +109,21 @@ function csme_set_up_cross_origin_isolation() {
 		return;
 	}
 
-	if ( 'require-corp' === csme_send_coep_coop_headers() ) {
+	$coep = csme_send_coep_coop_headers();
+
+	if ( 'require-corp' === $coep ) {
 		csme_start_crossorigin_output_buffer();
+
+		/*
+		 * The Gutenberg plugin strips `crossorigin` from the media templates
+		 * because Document-Isolation-Policy does not need it. Under
+		 * `require-corp` it is needed, and this request is not using DIP, so
+		 * keep that override from running and take the templates over below.
+		 */
+		remove_action( 'wp_enqueue_media', 'gutenberg_override_media_templates' );
 	}
+
+	add_action( 'wp_enqueue_media', 'csme_override_media_templates', 99 );
 }
 
 add_action( 'load-post.php', 'csme_set_up_cross_origin_isolation', 20 );
@@ -434,6 +448,123 @@ function csme_is_cross_origin_url( $url, $site_url ) {
 	}
 
 	return csme_get_url_origin( $site_url ) !== $origin;
+}
+
+/**
+ * Takes over the printed media templates to control their crossorigin attributes.
+ *
+ * The Backbone templates behind the media modal carry placeholder URLs
+ * (`{{ data.url }}`), so whether a template's media ends up cross-origin is
+ * only known at render time. The attribute therefore has to be decided by
+ * isolation mode rather than by URL, exactly as WordPress 7.1 does.
+ *
+ * Which side of that decision WordPress lands on has changed between
+ * releases: 7.1 adds `crossorigin="anonymous"` to the AUDIO and VIDEO
+ * templates whenever client-side media processing is enabled, and the
+ * release that removes the Document-Isolation-Policy injection removes this
+ * too. Neither suits both COEP modes, so the plugin normalizes the templates
+ * itself and never has to ask which version is running.
+ *
+ * Runs late on `wp_enqueue_media` and steps aside if something else already
+ * took the action over, so this and the Gutenberg plugin's own override
+ * cannot both wrap `wp_print_media_templates()` and print it twice.
+ *
+ * @since 1.2.0
+ */
+function csme_override_media_templates() {
+	if ( ! has_action( 'admin_footer', 'wp_print_media_templates' ) ) {
+		return;
+	}
+
+	remove_action( 'admin_footer', 'wp_print_media_templates' );
+	add_action( 'admin_footer', 'csme_print_media_templates' );
+}
+
+/**
+ * Prints the media templates with their crossorigin attributes normalized.
+ *
+ * @since 1.2.0
+ */
+function csme_print_media_templates() {
+	ob_start();
+	wp_print_media_templates();
+	$html = (string) ob_get_clean();
+	$add  = 'require-corp' === csme_get_coep_mode();
+
+	echo csme_filter_media_template_crossorigin( $html, $add ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+}
+
+/**
+ * Adds or removes crossorigin attributes in the printed media templates.
+ *
+ * Under `require-corp` a cross-origin resource is blocked unless it sends
+ * `Cross-Origin-Resource-Policy` or is fetched with CORS, so every media tag
+ * in the templates gets the attribute. A same-origin resource is unaffected
+ * by it, which is why it can be applied without knowing the final URL.
+ *
+ * Under `credentialless` cross-origin resources already load without
+ * credentials, and the attribute would turn those loads into CORS requests
+ * that fail for anything served without `Access-Control-Allow-Origin`, such
+ * as media offloaded to a CDN. There it is removed.
+ *
+ * The templates live inside `<script type="text/html">` tags, whose contents
+ * the HTML API treats as raw text, so each block is parsed on its own and
+ * written back.
+ *
+ * @since 1.2.0
+ *
+ * @param string $html The printed media templates.
+ * @param bool   $add  Whether to add the attribute. False removes it.
+ * @return string Modified media templates.
+ */
+function csme_filter_media_template_crossorigin( $html, $add ) {
+	if ( ! class_exists( 'WP_HTML_Tag_Processor' ) ) {
+		return $html;
+	}
+
+	$script_processor = new WP_HTML_Tag_Processor( $html );
+
+	while ( $script_processor->next_tag( array( 'tag_name' => 'SCRIPT' ) ) ) {
+		if ( 'text/html' !== $script_processor->get_attribute( 'type' ) ) {
+			continue;
+		}
+
+		$template = $script_processor->get_modifiable_text();
+
+		if ( '' === $template ) {
+			continue;
+		}
+
+		$changed            = false;
+		$template_processor = new WP_HTML_Tag_Processor( $template );
+
+		while ( $template_processor->next_tag() ) {
+			if ( ! in_array( $template_processor->get_tag(), array( 'AUDIO', 'IMG', 'VIDEO' ), true ) ) {
+				continue;
+			}
+
+			$has_attribute = is_string( $template_processor->get_attribute( 'crossorigin' ) );
+
+			if ( $add && ! $has_attribute ) {
+				$template_processor->set_attribute( 'crossorigin', 'anonymous' );
+				$changed = true;
+			} elseif ( ! $add && $has_attribute ) {
+				$template_processor->remove_attribute( 'crossorigin' );
+				$changed = true;
+			}
+		}
+
+		/*
+		 * Writing the text back re-encodes nothing for this content type, but
+		 * it is still a full replacement of the block, so skip it entirely
+		 * when the template already matches the mode.
+		 */
+		if ( $changed ) {
+			$script_processor->set_modifiable_text( $template_processor->get_updated_html() );
+		}
+	}
+
+	return $script_processor->get_updated_html();
 }
 
 /**

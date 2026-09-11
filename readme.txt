@@ -32,6 +32,7 @@ This plugin restores support for Firefox and Safari by sending the older COEP/CO
 
 * Sends `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: credentialless` (or `require-corp` on Safari) headers in the block editor.
 * On Safari (`require-corp`), adds `crossorigin="anonymous"` to cross-origin images, scripts, styles, audio, and video so they can load through CORS. On Firefox (`credentialless`) nothing is added, because those resources already load without it and the attribute would break any host without CORS headers.
+* Applies the same rule to the media library templates, so the media modal previews match the isolation mode in use on whichever WordPress version is running.
 * Adds `credentialless` attribute to iframes so they continue working under COEP.
 * Filters embed previews for providers that do not support credentialless iframes (Facebook, SmugMug).
 
@@ -95,6 +96,7 @@ WordPress 7.1 converts HEIC images client-side where possible and server-side ot
 * The plugin now adds `crossorigin="anonymous"` itself, only on Safari (`require-corp`), instead of relying on the WordPress core function that is being removed. Covers images, scripts, styles, audio, video, and the audio or video parent of a cross-origin `<source>`, without seeking backwards through the document.
 * Stopped adding `crossorigin="anonymous"` on Firefox and Chrome below 137 (`credentialless`). Cross-origin resources already load there without it, and the attribute was breaking media served from hosts without CORS headers.
 * The COEP/COOP headers are sent directly instead of from an output buffer callback.
+* The plugin now decides the `crossorigin` attributes on the media library templates itself, adding them on Safari and removing them on Firefox and Chrome below 137. WordPress 7.1 adds them to every audio and video template regardless of browser, which broke media modal previews of audio and video served from a CDN on Firefox, and the WordPress release that drops the attributes would otherwise leave Safari without them.
 
 = 1.1.1 =
 * Reworked the description to open with a plain explanation of what the plugin does, instead of leading with wasm-vips, Document-Isolation-Policy and COEP/COOP. The technical explanation is still there, further down.
