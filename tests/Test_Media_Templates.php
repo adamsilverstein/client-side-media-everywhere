@@ -63,6 +63,33 @@ class Test_Media_Templates extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A valueless or empty attribute counts as present when removing.
+	 *
+	 * WP_HTML_Tag_Processor::get_attribute() returns boolean true for a
+	 * valueless attribute, so a string check would skip `<audio crossorigin>`
+	 * and leave a tag that still forces a CORS request.
+	 */
+	public function test_removes_valueless_crossorigin_from_media_tags() {
+		$html = $this->template( '<audio crossorigin src="{{ data.url }}"></audio><video crossorigin="" src="{{ data.url }}"></video>' );
+
+		$result = csme_filter_media_template_crossorigin( $html, false );
+
+		$this->assertStringNotContainsString( 'crossorigin', $result );
+	}
+
+	/**
+	 * A valueless attribute is left as is when adding.
+	 *
+	 * An empty or valueless `crossorigin` already maps to `anonymous`, so
+	 * rewriting it would churn the markup for no behaviour change.
+	 */
+	public function test_keeps_valueless_crossorigin_when_adding() {
+		$html = $this->template( '<audio crossorigin src="{{ data.url }}"></audio>' );
+
+		$this->assertSame( $html, csme_filter_media_template_crossorigin( $html, true ) );
+	}
+
+	/**
 	 * A template that already matches the mode comes back byte for byte.
 	 */
 	public function test_leaves_matching_template_untouched() {

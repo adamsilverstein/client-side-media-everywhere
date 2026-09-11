@@ -543,7 +543,8 @@ function csme_filter_media_template_crossorigin( $html, $add ) {
 				continue;
 			}
 
-			$has_attribute = is_string( $template_processor->get_attribute( 'crossorigin' ) );
+			// A valueless attribute reads back as boolean true, and already means `anonymous`.
+			$has_attribute = null !== $template_processor->get_attribute( 'crossorigin' );
 
 			if ( $add && ! $has_attribute ) {
 				$template_processor->set_attribute( 'crossorigin', 'anonymous' );
