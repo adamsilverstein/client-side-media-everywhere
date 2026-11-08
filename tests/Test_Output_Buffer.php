@@ -1,6 +1,6 @@
 <?php
 /**
- * Tests for csme_start_coep_coop_output_buffer() header output.
+ * Tests for the COEP/COOP headers and the require-corp output buffer.
  *
  * @package ClientSideMediaEverywhere
  */
@@ -18,9 +18,7 @@ class Test_Output_Buffer extends WP_UnitTestCase {
 		global $is_safari;
 		$is_safari = false;
 
-		csme_start_coep_coop_output_buffer();
-		echo 'test output';
-		ob_end_flush();
+		csme_send_coep_coop_headers();
 
 		$headers = $this->get_sent_headers();
 		$this->assertContains( 'Cross-Origin-Opener-Policy: same-origin', $headers );
@@ -33,9 +31,7 @@ class Test_Output_Buffer extends WP_UnitTestCase {
 		global $is_safari;
 		$is_safari = true;
 
-		csme_start_coep_coop_output_buffer();
-		echo 'test output';
-		ob_end_flush();
+		$this->assertSame( 'require-corp', csme_send_coep_coop_headers() );
 
 		$headers = $this->get_sent_headers();
 		$this->assertContains( 'Cross-Origin-Embedder-Policy: require-corp', $headers );
@@ -48,45 +44,25 @@ class Test_Output_Buffer extends WP_UnitTestCase {
 		global $is_safari;
 		$is_safari = false;
 
-		csme_start_coep_coop_output_buffer();
-		echo 'test output';
-		ob_end_flush();
+		$this->assertSame( 'credentialless', csme_send_coep_coop_headers() );
 
 		$headers = $this->get_sent_headers();
 		$this->assertContains( 'Cross-Origin-Embedder-Policy: credentialless', $headers );
 	}
 
 	/**
-	 * Cross-origin images get crossorigin="anonymous" under require-corp (Safari).
+	 * The require-corp output buffer adds crossorigin="anonymous" to
+	 * cross-origin resources of every kind.
 	 */
-	public function test_images_get_crossorigin_on_safari() {
-		global $is_safari;
-		$is_safari = true;
-
+	public function test_output_buffer_adds_crossorigin() {
 		ob_start();
-		csme_start_coep_coop_output_buffer();
-		echo '<img src="https://external.example.com/a.jpg">';
+		csme_start_crossorigin_output_buffer();
+		echo '<img src="https://external.example.com/a.jpg"><script src="https://external.example.com/a.js"></script><video><source src="https://external.example.com/a.mp4"></video>';
 		ob_end_flush();
 		$output = ob_get_clean();
 
-		$this->assertStringContainsString( 'crossorigin="anonymous"', $output );
-	}
-
-	/**
-	 * Images are left alone under credentialless (Firefox), where forcing
-	 * CORS mode would break images from servers without CORS headers.
-	 */
-	public function test_images_not_modified_on_non_safari() {
-		global $is_safari;
-		$is_safari = false;
-
-		ob_start();
-		csme_start_coep_coop_output_buffer();
-		echo '<img src="https://external.example.com/a.jpg">';
-		ob_end_flush();
-		$output = ob_get_clean();
-
-		$this->assertStringNotContainsString( 'crossorigin', $output );
+		$this->assertSame( 3, substr_count( $output, 'crossorigin="anonymous"' ) );
+		$this->assertStringContainsString( '<source src="https://external.example.com/a.mp4">', $output, 'SOURCE elements must not receive the attribute themselves.' );
 	}
 
 	/**

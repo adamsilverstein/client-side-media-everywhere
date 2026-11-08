@@ -3,11 +3,11 @@
  * Plugin Name: Client-Side Media Everywhere
  * Plugin URI:  https://github.com/adamsilverstein/client-side-media-everywhere
  * Description: Enables client-side media processing on Firefox and Safari via COEP/COOP cross-origin isolation headers.
- * Version:     1.1.0
+ * Version:     1.2.0
  * Requires at least: 6.8
  * Requires PHP: 7.4
  * Author:      Adam Silverstein
- * Author URI:  https://developer.wordpress.org
+ * Author URI:  https://profiles.wordpress.org/adamsilverstein/profile/
  * License:     GPL-2.0-or-later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: client-side-media-everywhere
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'CSME_VERSION', '1.1.0' );
+define( 'CSME_VERSION', '1.2.0' );
 define( 'CSME_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'CSME_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 

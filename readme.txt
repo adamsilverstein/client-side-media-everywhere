@@ -1,9 +1,9 @@
 === Client-Side Media Everywhere ===
 Contributors: adamsilverstein
-Tags: media, performance, cross-origin, wasm
+Tags: media, safari, firefox, performance, cross-origin
 Requires at least: 6.8
 Tested up to: 7.1
-Stable tag: 1.1.0
+Stable tag: 1.2.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -12,16 +12,27 @@ Enables client-side media processing on Firefox and Safari via COEP/COOP cross-o
 
 == Description ==
 
+**In one sentence: this plugin gets client-side media processing working in Safari and Firefox, which WordPress otherwise only does in Chrome.**
+
+When you upload an image in Chrome, WordPress resizes and compresses it on your own device before it is sent, so less data goes over the wire and your server does much less work. In Safari and Firefox that is switched off, and uploads fall back to the older server-side path. This plugin switches it back on.
+
+There is nothing to configure - activate the plugin and it works. Chrome is unaffected, because WordPress already handles it there.
+
+One thing to know before you install: this works by turning on cross-origin isolation, which is a real security boundary and can affect embeds and third-party media inside the editor. It is worth reading the Tradeoffs section below first.
+
+**Why WordPress switches it off:**
+
 WordPress 7.1 and Gutenberg include client-side media processing powered by WebAssembly (wasm-vips). This requires cross-origin isolation, which is achieved via Document-Isolation-Policy (DIP) on Chrome 137+.
 
-However, Firefox and Safari do not yet support DIP, so client-side media processing is disabled on those browsers.
+However, Firefox and Safari do not yet support DIP, and neither does Chrome before 137, so client-side media processing is disabled on those browsers.
 
 This plugin restores support for Firefox and Safari by sending the older COEP/COOP headers (Cross-Origin-Embedder-Policy / Cross-Origin-Opener-Policy) on browsers where DIP is not available.
 
-**What this plugin does:**
+**Under the hood:**
 
 * Sends `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: credentialless` (or `require-corp` on Safari) headers in the block editor.
-* Adds `crossorigin="anonymous"` attributes to cross-origin resources.
+* On Safari (`require-corp`), adds `crossorigin="anonymous"` to cross-origin images, scripts, styles, audio, and video so they can load through CORS. On Firefox (`credentialless`) nothing is added, because those resources already load without it and the attribute would break any host without CORS headers.
+* Applies the same rule to the media library templates, so the media modal previews match the isolation mode in use on whichever WordPress version is running.
 * Adds `credentialless` attribute to iframes so they continue working under COEP.
 * Filters embed previews for providers that do not support credentialless iframes (Facebook, SmugMug).
 * Extends client-side media processing to the Media Library (Media > Library) and the Add New Media File screen (Media > Add New Media File), which core processes server-side. On both screens the plugin restores cross-origin isolation - including sending the Document-Isolation-Policy header on Chrome 137+, which core does not send there - and routes uploads through the browser pipeline (REST upload, client-side thumbnails, sideload, finalize), falling back to the classic upload when unsupported. The Media Library's list mode uploads via the Add New Media File screen, so both views are covered.
@@ -32,6 +43,22 @@ This plugin restores support for Firefox and Safari by sending the older COEP/CO
 * WordPress 6.8+ with the Gutenberg plugin (which provides the client-side media processing feature), or WordPress 7.1+.
 * The client-side media processing feature must be enabled (it is on by default in secure contexts).
 * HTTPS (or localhost): client-side media processing requires a secure context.
+
+== Tradeoffs ==
+
+Cross-origin isolation is a security boundary. It works by making the browser refuse cross-origin resources that have not opted in, or strip their credentials. That is what unlocks SharedArrayBuffer and wasm-vips, but it is also why Chrome moved to Document-Isolation-Policy: DIP gives the same isolation without imposing these restrictions on the rest of the page.
+
+Only browsers that receive the COEP/COOP headers are affected - Firefox, Safari, and Chrome < 137 - and only on block editor screens (post editor, site editor, block widgets) for users who can upload files. The front-end, the rest of wp-admin, and Chrome 137+ are untouched.
+
+What can break on those screens:
+
+* **oEmbed previews.** Embeds are iframed. Under `credentialless` (Firefox, Chrome < 137) the plugin adds the `credentialless` attribute so they still load, but without cookies - embeds that need a logged-in session render logged-out or not at all. Facebook and SmugMug do not work with credentialless iframes, so their live previews are disabled in the editor and the placeholder is shown instead. Safari does not support `credentialless` at all, so under `require-corp` any embed whose provider does not send its own COEP header is blocked outright.
+* **Media served from third-party origins.** Images, video, audio, and fonts loaded into the editor from a CDN or another domain must opt in with `Cross-Origin-Resource-Policy`. Under `credentialless` they load but without credentials, so anything behind a signed cookie fails. Under `require-corp` (Safari) they are blocked unless the server sends CORP - the plugin adds `crossorigin="anonymous"` to cross-origin images, scripts, styles, audio, and video to give them a CORS path instead, which only helps if the server sends `Access-Control-Allow-Origin`.
+* **Popup-based authentication.** `Cross-Origin-Opener-Policy: same-origin` severs the `window.opener` link to cross-origin popups. Plugins that connect to an external service by opening an OAuth popup and waiting for it to call back into the opener will hang.
+* **Plugins that load editor assets cross-origin.** Any third-party script, stylesheet, or font pulled into the editor from another origin is subject to the same rules.
+* **The classic block.** The classic block and other TinyMCE-based UIs commonly load third-party assets, and are a frequent place for the failures above to surface.
+
+These are the same constraints the block editor lived with before Chrome shipped Document-Isolation-Policy. If you hit one, suppress the headers with the `csme_use_coep_coop` filter or deactivate the plugin - media processing then falls back to the server on the affected browsers, which is the behavior without this plugin installed.
 
 == Installation ==
 
@@ -51,7 +78,7 @@ Not in the block editor. Chrome 137+ uses Document-Isolation-Policy for the bloc
 
 = Will this break my site? =
 
-The isolation headers are only sent on the block editor admin pages and the media upload screens (the Media Library grid and Add New Media File), not on the front-end. Some third-party plugins that use iframes in the editor may be affected. If you experience issues, you can deactivate the plugin.
+Not the front-end: the COEP/COOP headers are only sent on block editor admin pages and the media upload screens (the Media Library grid and Add New Media File), and only on browsers that need them (Firefox, Safari, Chrome < 137). Within the editor on those browsers, cross-origin isolation can break oEmbed previews, media served from third-party origins, popup-based authentication flows, and plugins that load editor assets cross-origin. See the Tradeoffs section for the details and for how to turn the headers off if you hit one.
 
 = Does client-side processing work in the Media Library? =
 
@@ -70,6 +97,19 @@ To keep the plugin active but suppress the headers programmatically (for example
 WordPress 7.1 converts HEIC images client-side where possible and server-side otherwise. This plugin no longer includes any HEIC handling of its own.
 
 == Changelog ==
+
+= 1.2.0 =
+* The plugin now adds `crossorigin="anonymous"` itself, only on Safari (`require-corp`), instead of relying on the WordPress core function that is being removed. Covers images, scripts, styles, audio, video, and the audio or video parent of a cross-origin `<source>`, without seeking backwards through the document.
+* Stopped adding `crossorigin="anonymous"` on Firefox and Chrome below 137 (`credentialless`). Cross-origin resources already load there without it, and the attribute was breaking media served from hosts without CORS headers.
+* The COEP/COOP headers are sent directly instead of from an output buffer callback.
+* Fixed cross-origin media in the block editor canvas on Safari. The observer that adds `crossorigin="anonymous"` attached to the canvas iframe before its real document existed and never saw anything rendered in it, so images, audio and video from other sites showed as broken in the editor while working on the front end. It now follows the canvas document, marks what is already there, and retries a blocked load once.
+* Media that cannot load on Safari at all, because its host does not allow cross-origin requests, now shows a "can't be previewed in Safari" panel in the canvas instead of a broken image or an "Error" player, with a notice in the block inspector and one editor notice explaining why. The media itself is unaffected and still displays on the site.
+* The plugin now decides the `crossorigin` attributes on the media library templates itself, adding them on Safari and removing them on Firefox and Chrome below 137. WordPress 7.1 adds them to every audio and video template regardless of browser, which broke media modal previews of audio and video served from a CDN on Firefox, and the WordPress release that drops the attributes would otherwise leave Safari without them.
+
+= 1.1.1 =
+* Reworked the description to open with a plain explanation of what the plugin does, instead of leading with wasm-vips, Document-Isolation-Policy and COEP/COOP. The technical explanation is still there, further down.
+* Added `safari` and `firefox` to the plugin tags, since that is what people are likely searching for.
+* No functional changes: the plugin code is identical to 1.1.0.
 
 = 1.1.0 =
 * Renamed the plugin from "Client-Side Media Experiments" to "Client-Side Media Everywhere" to better describe what it does: bringing the WordPress client-side media processing feature to browsers that core does not cover.

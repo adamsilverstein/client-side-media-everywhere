@@ -2,18 +2,29 @@
 
 Enables client-side media processing on Firefox and Safari via COEP/COOP cross-origin isolation headers.
 
+## What this plugin does
+
+**In one sentence: this plugin gets client-side media processing working in Safari and Firefox, which WordPress otherwise only does in Chrome.**
+
+When you upload an image in Chrome, WordPress resizes and compresses it on your own device before it is sent, so less data goes over the wire and your server does much less work. In Safari and Firefox that is switched off, and uploads fall back to the older server-side path. This plugin switches it back on.
+
+There is nothing to configure - activate the plugin and it works. Chrome is unaffected, because WordPress already handles it there.
+
+One thing to know before you install: this works by turning on cross-origin isolation, which is a real security boundary and can affect embeds and third-party media inside the editor. It is worth reading the [Tradeoffs](#tradeoffs) section first.
+
 ## Features
 
 ### Cross-Origin Isolation (COEP/COOP)
 
 WordPress 7.1 and Gutenberg include client-side media processing powered by WebAssembly (wasm-vips). This requires cross-origin isolation, which is achieved via Document-Isolation-Policy (DIP) on Chrome 137+.
 
-However, Firefox and Safari do not yet support DIP, so client-side media processing is disabled on those browsers.
+However, Firefox and Safari do not yet support DIP, and neither does Chrome before 137, so client-side media processing is disabled on those browsers.
 
 This plugin restores support by sending the older COEP/COOP headers on browsers where DIP is not available:
 
 - Sends `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: credentialless` (or `require-corp` on Safari) headers in the block editor.
-- Adds `crossorigin="anonymous"` attributes to cross-origin resources.
+- On Safari (`require-corp`), adds `crossorigin="anonymous"` to cross-origin images, scripts, styles, audio, and video so they can load through CORS. On Firefox (`credentialless`) nothing is added, because those resources already load without it and the attribute would break any host without CORS headers.
+- Applies the same rule to the media library templates, whose URLs are only known at render time, so the media modal previews match the isolation mode on whichever WordPress version is running.
 - Adds `credentialless` attribute to iframes so they continue working under COEP.
 - Filters embed previews for providers that do not support credentialless iframes (Facebook, SmugMug).
 
@@ -26,6 +37,22 @@ WordPress core's client-side media pipeline only runs in the block editor; the c
 - Routes the **Add New Media File** screen (`media-new.php`) through the same pipeline, reusing the screen's existing progress and error UI. This is also how the Media Library's **list mode** uploads: its "Add New Media File" button links to this screen, so both Media Library views are covered.
 - Warns before leaving the page while a pipeline upload is in flight, since browser-generated thumbnails that have not been sideloaded yet would be lost (classic uploads finish server-side and need no guard).
 - Falls back cleanly to the classic server-side upload when the browser does not support client-side processing.
+
+## Tradeoffs
+
+Cross-origin isolation is a security boundary. It works by making the browser refuse cross-origin resources that have not opted in, or strip their credentials. That is what unlocks `SharedArrayBuffer` and wasm-vips, but it is also why Chrome moved to Document-Isolation-Policy: DIP gives the same isolation without imposing these restrictions on the rest of the page.
+
+**Scope of the impact.** Only browsers that receive the COEP/COOP headers are affected - Firefox, Safari, and Chrome < 137 - and only on block editor screens (post editor, site editor, block widgets) and the Media Library upload screens (the grid and Add New Media File) for users who can upload files. The front-end, the rest of wp-admin, and Chrome 137+ are untouched.
+
+What can break on those screens:
+
+- **oEmbed previews.** Embeds are iframed. Under `credentialless` (Firefox, Chrome < 137) the plugin adds the `credentialless` attribute so they still load, but without cookies - embeds that need a logged-in session render logged-out or not at all. Facebook and SmugMug do not work with credentialless iframes, so their live previews are disabled in the editor and the placeholder is shown instead. Safari does not support `credentialless` at all, so under `require-corp` any embed whose provider does not send its own COEP header is blocked outright.
+- **Media served from third-party origins.** Images, video, audio, and fonts loaded into the editor from a CDN or another domain must opt in with `Cross-Origin-Resource-Policy`. Under `credentialless` they load but without credentials, so anything behind a signed cookie fails. Under `require-corp` (Safari) they are blocked unless the server sends CORP - the plugin adds `crossorigin="anonymous"` to cross-origin images, scripts, styles, audio, and video to give them a CORS path instead, which only helps if the server sends `Access-Control-Allow-Origin`.
+- **Popup-based authentication.** `Cross-Origin-Opener-Policy: same-origin` severs the `window.opener` link to cross-origin popups. Plugins that connect to an external service by opening an OAuth popup and waiting for it to call back into the opener will hang.
+- **Plugins that load editor assets cross-origin.** Any third-party script, stylesheet, or font pulled into the editor from another origin is subject to the same rules.
+- **The classic block.** The classic block and other TinyMCE-based UIs commonly load third-party assets, and are a frequent place for the failures above to surface.
+
+These are the same constraints the block editor lived with before Chrome shipped Document-Isolation-Policy. If you hit one, you can suppress the headers per environment or per user with the [`csme_use_coep_coop` filter](#disable-coepcoop-headers-programmatically), or deactivate the plugin - media processing then falls back to the server on the affected browsers, which is the behavior without this plugin installed.
 
 ## Requirements
 
