@@ -109,6 +109,17 @@ function csme_set_up_cross_origin_isolation() {
 		return;
 	}
 
+	csme_start_coep_coop_isolation();
+}
+
+/**
+ * Starts COEP/COOP cross-origin isolation for the current request.
+ *
+ * Shared by the block editor screens and the Media Library upload screens.
+ *
+ * @since 1.2.0
+ */
+function csme_start_coep_coop_isolation() {
 	$coep = csme_send_coep_coop_headers();
 
 	if ( 'require-corp' === $coep ) {

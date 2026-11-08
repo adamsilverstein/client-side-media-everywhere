@@ -25,12 +25,18 @@ class Test_Media_Library_Isolation extends WP_UnitTestCase {
 
 		// Isolation is gated on the upload-media package being registered.
 		wp_register_script( 'wp-upload-media', 'https://example.org/upload-media.js', array(), '1.0', true );
+
+		// Under require-corp the COEP/COOP path starts an output buffer, so the tests can observe it.
+		global $is_safari;
+		$is_safari = true;
 	}
 
 	/**
 	 * Tear down after each test.
 	 */
 	public function tear_down() {
+		global $is_safari;
+		$is_safari = false;
 		remove_all_filters( 'csme_use_coep_coop' );
 		unset( $_GET['mode'] );
 		unset( $_SERVER['HTTP_USER_AGENT'] );
