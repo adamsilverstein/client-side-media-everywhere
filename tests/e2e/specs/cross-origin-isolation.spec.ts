@@ -344,7 +344,7 @@ test.describe( 'Cross-Origin Isolation', () => {
 		}
 	} );
 
-	test( 'should add crossorigin to dynamic non-image media elements', async ( {
+	test( 'should add crossorigin to dynamic non-image media elements only under require-corp', async ( {
 		admin,
 		page,
 		browserName,
@@ -356,7 +356,6 @@ test.describe( 'Cross-Origin Isolation', () => {
 
 		await admin.createNewPost();
 
-		// Non-IMG elements get the attribute in both COEP modes.
 		await page.evaluate( () => {
 			const video = document.createElement( 'video' );
 			video.id = 'csme-test-video';
@@ -365,12 +364,26 @@ test.describe( 'Cross-Origin Isolation', () => {
 			document.body.appendChild( video );
 		} );
 
-		await page.waitForFunction( () => {
-			const video = document.getElementById( 'csme-test-video' );
-			return (
-				video && video.getAttribute( 'crossorigin' ) === 'anonymous'
-			);
-		} );
+		if ( browserName === 'webkit' ) {
+			await page.waitForFunction( () => {
+				const video = document.getElementById( 'csme-test-video' );
+				return (
+					video && video.getAttribute( 'crossorigin' ) === 'anonymous'
+				);
+			} );
+		} else {
+			/*
+			 * Under credentialless (Firefox) the media already loads without
+			 * credentials, and forcing CORS mode would break it on servers
+			 * without CORS headers. Give the observer a moment to (not) react.
+			 */
+			await page.waitForTimeout( 1000 );
+			const crossorigin = await page.evaluate( () => {
+				const video = document.getElementById( 'csme-test-video' );
+				return video ? video.getAttribute( 'crossorigin' ) : 'missing';
+			} );
+			expect( crossorigin ).toBeNull();
+		}
 	} );
 
 	test( 'should add credentialless attribute to iframes', async ( {
