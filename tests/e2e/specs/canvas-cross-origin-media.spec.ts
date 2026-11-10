@@ -163,11 +163,16 @@ test.describe( 'Cross-origin media in the editor canvas', () => {
 		} );
 		expect( panel ).toContain( 'be previewed in Safari.' );
 
-		// One editor notice explains it, however many elements are flagged.
+		/*
+		 * One editor notice explains it, however many elements are flagged.
+		 * Matched by its copy, since the notice markup differs between
+		 * WordPress versions. The copy is also spoken through the a11y
+		 * live region, which is not the notice.
+		 */
 		await expect(
-			page.locator( '.components-notice' ).filter( {
-				hasText: "can't be previewed in Safari",
-			} )
+			page
+				.getByText( "Some media can't be previewed in Safari" )
+				.and( page.locator( ':not(.a11y-speak-region)' ) )
 		).toHaveCount( 1 );
 
 		// The flagged block gets a notice in its inspector; the rescued one does not.
