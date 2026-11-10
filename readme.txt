@@ -2,7 +2,7 @@
 Contributors: adamsilverstein
 Tags: media, safari, firefox, performance, cross-origin
 Requires at least: 6.8
-Tested up to: 7.1
+Tested up to: 7.2
 Stable tag: 1.2.0
 Requires PHP: 7.4
 License: GPLv2 or later
