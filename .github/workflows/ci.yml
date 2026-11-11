@@ -65,6 +65,8 @@ jobs:
   test:
     name: Test (PHP ${{ matrix.php }} / WP ${{ matrix.wp }})
     runs-on: ubuntu-latest
+    # Trunk changes under us; report breakage without failing every PR.
+    continue-on-error: ${{ matrix.wp == 'trunk' }}
 
     strategy:
       fail-fast: false
