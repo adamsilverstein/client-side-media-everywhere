@@ -84,5 +84,51 @@ test.describe( 'Client-side uploads on the media screens', () => {
 
 			expect( classicUploads ).toEqual( [] );
 		} );
+
+		test( `should warn before leaving ${ screen.name } mid-upload`, async ( {
+			admin,
+			page,
+		} ) => {
+			await admin.visitAdminPage( screen.path, screen.query );
+
+			// Hold the first sideload so the upload stays in flight.
+			let releaseSideload = () => {};
+			const sideloadHeld = new Promise< void >( ( resolve ) => {
+				page.route(
+					( url ) =>
+						/wp\/v2\/media\/\d+\/sideload/.test(
+							decodeURIComponent( url.toString() )
+						),
+					async ( route ) => {
+						resolve();
+						await new Promise< void >( ( release ) => {
+							releaseSideload = release;
+						} );
+						await route.continue();
+					},
+					{ times: 1 }
+				);
+			} );
+
+			// Browsers only show the prompt after the user has interacted with the page.
+			await page.locator( '.wrap h1' ).first().click();
+
+			await page
+				.locator( 'input[type="file"]' )
+				.first()
+				.setInputFiles( TEST_IMAGE_PATH );
+
+			await sideloadHeld;
+
+			const dialogPromise = page.waitForEvent( 'dialog' );
+			await page.close( { runBeforeUnload: true } );
+			const dialog = await dialogPromise;
+			expect( dialog.type() ).toBe( 'beforeunload' );
+
+			// Stay on the page and let the upload finish.
+			await dialog.dismiss();
+			releaseSideload();
+			expect( page.isClosed() ).toBe( false );
+		} );
 	}
 } );
