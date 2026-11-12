@@ -3,7 +3,7 @@ Contributors: adamsilverstein
 Tags: media, safari, firefox, performance, cross-origin
 Requires at least: 6.8
 Tested up to: 7.2
-Stable tag: 1.2.0
+Stable tag: 1.3.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -94,6 +94,11 @@ To keep the plugin active but suppress the headers programmatically (for example
 WordPress 7.1 converts HEIC images client-side where possible and server-side otherwise. This plugin no longer includes any HEIC handling of its own.
 
 == Changelog ==
+
+= 1.3.0 =
+* Tested up to WordPress 7.2.
+* On WordPress 7.2 and later, uploads from the Media Library grid, the "Add New Media File" screen and the media modal are now processed in the browser on Firefox and Safari too. WordPress 7.2 moves those screens onto its client-side upload pipeline, but only turns it on for Chrome 137+. The plugin sends the COEP/COOP headers on those screens and loads the upload scripts WordPress already ships, with no uploader code of its own. Older WordPress versions behave as before.
+* Media Library list mode is left alone, since it has no uploader of its own.
 
 = 1.2.0 =
 * The plugin now adds `crossorigin="anonymous"` itself, only on Safari (`require-corp`), instead of relying on the WordPress core function that is being removed. Covers images, scripts, styles, audio, video, and the audio or video parent of a cross-origin `<source>`, without seeking backwards through the document.
