@@ -56,9 +56,9 @@ class Test_Add_Crossorigin_Attributes extends WP_UnitTestCase {
 		$scheme   = wp_parse_url( $site_url, PHP_URL_SCHEME );
 
 		return array(
-			'host prefix'     => array( $site_url . '.cdn.net/photo.jpg' ),
-			'different port'  => array( $scheme . '://' . $host . ':8443/photo.jpg' ),
-			'different host'  => array( $scheme . '://cdn.example.net/photo.jpg' ),
+			'host prefix'    => array( $scheme . '://' . $host . '.cdn.net/photo.jpg' ),
+			'different port' => array( $scheme . '://' . $host . ':8443/photo.jpg' ),
+			'different host' => array( $scheme . '://cdn.example.net/photo.jpg' ),
 		);
 	}
 
@@ -95,18 +95,27 @@ class Test_Add_Crossorigin_Attributes extends WP_UnitTestCase {
 
 		$host   = wp_parse_url( $site_url, PHP_URL_HOST );
 		$scheme = wp_parse_url( $site_url, PHP_URL_SCHEME );
+		$port   = wp_parse_url( $site_url, PHP_URL_PORT );
 
-		return array(
-			'path'             => array( $site_url . '/photo.jpg' ),
-			'query'            => array( $site_url . '?p=1' ),
-			'fragment'         => array( $site_url . '#top' ),
-			// An explicit default port is the same origin as no port.
-			'default port'     => array( $scheme . '://' . $host . ( 'https' === $scheme ? ':443' : ':80' ) . '/photo.jpg' ),
+		// Host and port, so the fixtures hold on a site with a port too.
+		$authority = $port ? $host . ':' . $port : $host;
+
+		$data = array(
+			'path'              => array( $site_url . '/photo.jpg' ),
+			'query'             => array( $site_url . '?p=1' ),
+			'fragment'          => array( $site_url . '#top' ),
 			// Outside the install directory, but still the site's own origin.
-			'sibling path'     => array( $scheme . '://' . $host . '/elsewhere/photo.jpg' ),
+			'sibling path'      => array( $scheme . '://' . $authority . '/elsewhere/photo.jpg' ),
 			// Protocol-relative to the site's own host inherits its scheme.
-			'protocol relative' => array( '//' . $host . '/photo.jpg' ),
+			'protocol relative' => array( '//' . $authority . '/photo.jpg' ),
 		);
+
+		// An explicit default port is the same origin as no port.
+		if ( ! $port ) {
+			$data['default port'] = array( $scheme . '://' . $host . ( 'https' === $scheme ? ':443' : ':80' ) . '/photo.jpg' );
+		}
+
+		return $data;
 	}
 
 	/**
