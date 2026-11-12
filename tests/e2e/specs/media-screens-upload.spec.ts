@@ -66,11 +66,11 @@ test.describe( 'Client-side uploads on the media screens', () => {
 			await admin.visitAdminPage( screen.path, screen.query );
 
 			// The sub-sizes are generated in the browser and sideloaded one by one.
-			const sideloadPromise = page.waitForRequest(
-				( request ) =>
-					request.method() === 'POST' &&
+			const sideloadPromise = page.waitForResponse(
+				( response ) =>
+					response.request().method() === 'POST' &&
 					/wp\/v2\/media\/\d+\/sideload/.test(
-						decodeURIComponent( request.url() )
+						decodeURIComponent( response.url() )
 					),
 				{ timeout: 60_000 }
 			);
@@ -80,7 +80,7 @@ test.describe( 'Client-side uploads on the media screens', () => {
 				.first()
 				.setInputFiles( TEST_IMAGE_PATH );
 
-			await sideloadPromise;
+			expect( ( await sideloadPromise ).ok() ).toBe( true );
 
 			expect( classicUploads ).toEqual( [] );
 		} );
