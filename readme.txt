@@ -16,6 +16,8 @@ Enables client-side media processing on Firefox and Safari via COEP/COOP cross-o
 
 When you upload an image in Chrome, WordPress resizes and compresses it on your own device before it is sent, so less data goes over the wire and your server does much less work. In Safari and Firefox that is switched off, and uploads fall back to the older server-side path. This plugin switches it back on.
 
+It does this in the block editor. WordPress 7.2 also processes uploads on your device in the Media Library grid and on the "Add New Media File" screen, but only in Chrome: in Safari and Firefox those two screens still upload the server-side way, with or without this plugin.
+
 There is nothing to configure - activate the plugin and it works. Chrome is unaffected, because WordPress already handles it there.
 
 One thing to know before you install: this works by turning on cross-origin isolation, which is a real security boundary and can affect embeds and third-party media inside the editor. It is worth reading the Tradeoffs section below first.
