@@ -25,6 +25,7 @@ This plugin restores support by sending the older COEP/COOP headers on browsers 
 - Sends `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: credentialless` (or `require-corp` on Safari) headers in the block editor.
 - On Safari (`require-corp`), adds `crossorigin="anonymous"` to cross-origin images, scripts, styles, audio, and video so they can load through CORS. On Firefox (`credentialless`) nothing is added, because those resources already load without it and the attribute would break any host without CORS headers.
 - Applies the same rule to the media library templates, whose URLs are only known at render time, so the media modal previews match the isolation mode on whichever WordPress version is running.
+- On WordPress 7.2 and later, also isolates the Media Library grid and the "Add New Media File" screen and loads WordPress's own upload scripts there, so uploads from those screens and from the media modal are processed in the browser too. WordPress only does this by itself on Chrome 137+.
 - Adds `credentialless` attribute to iframes so they continue working under COEP.
 - Filters embed previews for providers that do not support credentialless iframes (Facebook, SmugMug).
 
@@ -32,7 +33,7 @@ This plugin restores support by sending the older COEP/COOP headers on browsers 
 
 Cross-origin isolation is a security boundary. It works by making the browser refuse cross-origin resources that have not opted in, or strip their credentials. That is what unlocks `SharedArrayBuffer` and wasm-vips, but it is also why Chrome moved to Document-Isolation-Policy: DIP gives the same isolation without imposing these restrictions on the rest of the page.
 
-**Scope of the impact.** Only browsers that receive the COEP/COOP headers are affected - Firefox, Safari, and Chrome < 137 - and only on block editor screens (post editor, site editor, block widgets) for users who can upload files. The front-end, the rest of wp-admin, and Chrome 137+ are untouched.
+**Scope of the impact.** Only browsers that receive the COEP/COOP headers are affected - Firefox, Safari, and Chrome < 137 - and only on block editor screens (post editor, site editor, block widgets) and, on WordPress 7.2+, the Media Library grid and "Add New Media File" screens, for users who can upload files. The front-end, the rest of wp-admin, and Chrome 137+ are untouched.
 
 What can break on those screens:
 
