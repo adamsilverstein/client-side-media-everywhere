@@ -59,6 +59,39 @@ function csme_get_coep_mode() {
 }
 
 /**
+ * Whether WordPress ships the client-side upload integration for media frames
+ * and the "Add New Media File" screen (WordPress 7.2+).
+ *
+ * @since 1.3.0
+ *
+ * @return bool
+ */
+function csme_has_core_media_upload_pipeline(): bool {
+	return function_exists( 'wp_get_media_library_upload_settings' );
+}
+
+/**
+ * Whether a screen is one of the media screens core uploads client-side on:
+ * the Media Library in grid mode, or "Add New Media File".
+ *
+ * @since 1.3.0
+ *
+ * @param WP_Screen $screen The screen to check.
+ * @return bool
+ */
+function csme_is_media_upload_screen( WP_Screen $screen ): bool {
+	if ( ! csme_has_core_media_upload_pipeline() ) {
+		return false;
+	}
+
+	if ( 'media' === $screen->id ) {
+		return true;
+	}
+
+	return 'upload' === $screen->id && function_exists( 'wp_get_media_library_mode' ) && 'grid' === wp_get_media_library_mode();
+}
+
+/**
  * Whether the current request should get COEP/COOP cross-origin isolation.
  *
  * @since 1.2.0
@@ -76,13 +109,15 @@ function csme_should_set_up_cross_origin_isolation() {
 		return false;
 	}
 
-	if ( ! $screen->is_block_editor() && 'site-editor' !== $screen->id && ! ( 'widgets' === $screen->id && wp_use_widgets_block_editor() ) ) {
+	$is_media_screen = csme_is_media_upload_screen( $screen );
+
+	if ( ! $is_media_screen && ! $screen->is_block_editor() && 'site-editor' !== $screen->id && ! ( 'widgets' === $screen->id && wp_use_widgets_block_editor() ) ) {
 		return false;
 	}
 
 	// Skip when a third-party page builder overrides the block editor.
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-	if ( isset( $_GET['action'] ) && 'edit' !== $_GET['action'] ) {
+	if ( ! $is_media_screen && isset( $_GET['action'] ) && 'edit' !== $_GET['action'] ) {
 		return false;
 	}
 
@@ -124,12 +159,87 @@ function csme_set_up_cross_origin_isolation() {
 	}
 
 	add_action( 'wp_enqueue_media', 'csme_override_media_templates', 99 );
+
+	if ( csme_has_core_media_upload_pipeline() ) {
+		add_action( 'wp_enqueue_media', 'csme_enqueue_media_frame_upload' );
+		add_action( 'admin_enqueue_scripts', 'csme_enqueue_media_new_upload' );
+	}
 }
 
+add_action( 'load-upload.php', 'csme_set_up_cross_origin_isolation', 20 );
+add_action( 'load-media-new.php', 'csme_set_up_cross_origin_isolation', 20 );
 add_action( 'load-post.php', 'csme_set_up_cross_origin_isolation', 20 );
 add_action( 'load-post-new.php', 'csme_set_up_cross_origin_isolation', 20 );
 add_action( 'load-site-editor.php', 'csme_set_up_cross_origin_isolation', 20 );
 add_action( 'load-widgets.php', 'csme_set_up_cross_origin_isolation', 20 );
+
+/**
+ * Enqueues one of core's client-side upload integration scripts with its settings.
+ *
+ * Core only enqueues these when the browser supports Document-Isolation-Policy.
+ * The scripts themselves only need a cross-origin isolated page, which COEP/COOP
+ * provides, so this mirrors `_wp_enqueue_media_upload_pipeline_script()` without
+ * that check.
+ *
+ * @since 1.3.0
+ *
+ * @param string $handle The screen script to enqueue: 'media-frame-upload' or 'media-new-upload'.
+ *
+ * @phpstan-param non-empty-string $handle
+ */
+function csme_enqueue_media_upload_pipeline_script( string $handle ): void {
+	if ( ! function_exists( 'wp_get_media_library_upload_settings' ) ) {
+		return;
+	}
+
+	wp_enqueue_script( $handle );
+
+	// Core uses the same flag, so the settings are only ever added once.
+	if ( wp_scripts()->get_data( 'media-upload-pipeline', 'settings_added' ) ) {
+		return;
+	}
+	wp_scripts()->add_data( 'media-upload-pipeline', 'settings_added', true );
+
+	$settings = wp_get_media_library_upload_settings();
+	$screen   = get_current_screen();
+
+	if ( ! is_array( $settings ) ) {
+		return;
+	}
+
+	// The block editor configures the upload-media store itself; the pipeline waits for it.
+	$settings['isBlockEditor'] = $screen && $screen->is_block_editor();
+
+	wp_add_inline_script(
+		'media-upload-pipeline',
+		'window._wpMediaUploadPipelineSettings = ' . wp_json_encode( $settings, JSON_HEX_TAG | JSON_UNESCAPED_SLASHES ) . ';',
+		'before'
+	);
+}
+
+/**
+ * Routes media frame uploads through the client-side pipeline.
+ *
+ * Covers the Media Library grid and the media modal on the editor screens.
+ *
+ * @since 1.3.0
+ */
+function csme_enqueue_media_frame_upload(): void {
+	csme_enqueue_media_upload_pipeline_script( 'media-frame-upload' );
+}
+
+/**
+ * Routes "Add New Media File" uploads through the client-side pipeline.
+ *
+ * @since 1.3.0
+ *
+ * @param string $hook_suffix The current admin page hook suffix.
+ */
+function csme_enqueue_media_new_upload( $hook_suffix ): void {
+	if ( 'media-new.php' === $hook_suffix ) {
+		csme_enqueue_media_upload_pipeline_script( 'media-new-upload' );
+	}
+}
 
 /**
  * Sends the COOP and COEP headers for cross-origin isolation.
