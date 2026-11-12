@@ -5,13 +5,13 @@
 	"description": "WordPress plugin enabling client-side media processing on Firefox and Safari via COEP/COOP headers.",
 	"license": "GPL-2.0-or-later",
 	"engines": {
-		"node": ">=20"
+		"node": ">=24"
 	},
 	"devDependencies": {
 		"@playwright/test": "^1.58.2",
-		"@wordpress/e2e-test-utils-playwright": "^1.41.0",
+		"@wordpress/e2e-test-utils-playwright": "^3.2.0",
 		"@wordpress/env": "^10.39.0",
-		"@wordpress/scripts": "^33.0.0"
+		"@wordpress/scripts": "^37.0.0"
 	},
 	"scripts": {
 		"wp-env": "wp-env",
