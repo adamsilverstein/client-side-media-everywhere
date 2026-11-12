@@ -6,9 +6,34 @@ import * as path from 'path';
 /**
  * WordPress dependencies
  */
+import type { Page } from '@playwright/test';
 import { test, expect } from '@wordpress/e2e-test-utils-playwright';
 
 const TEST_IMAGE_PATH = path.join( __dirname, '..', 'fixtures', 'test-image.jpg' );
+
+/**
+ * Waits until the MutationObserver has handled everything added so far.
+ *
+ * Appends a sentinel iframe and waits for it to get the credentialless
+ * attribute, which the observer adds in every COEP mode. Nodes are handled
+ * in order, so earlier ones are done by then.
+ *
+ * @param page The page under test.
+ */
+async function waitForObserver( page: Page ) {
+	await page.evaluate( () => {
+		const iframe = document.createElement( 'iframe' );
+		iframe.id = 'csme-test-sentinel';
+		iframe.src = 'about:blank';
+		document.body.appendChild( iframe );
+	} );
+
+	await page.waitForFunction( () =>
+		document
+			.getElementById( 'csme-test-sentinel' )
+			?.hasAttribute( 'credentialless' )
+	);
+}
 
 test.describe( 'Cross-Origin Isolation', () => {
 	test( 'should be cross-origin isolated on Firefox', async ( {
@@ -333,9 +358,9 @@ test.describe( 'Cross-Origin Isolation', () => {
 			/*
 			 * Under credentialless (Firefox), forcing CORS mode would break
 			 * images from servers without CORS headers, so the observer must
-			 * leave images alone. Give it a moment to (not) react.
+			 * leave images alone.
 			 */
-			await page.waitForTimeout( 1000 );
+			await waitForObserver( page );
 			const crossorigin = await page.evaluate( () => {
 				const img = document.getElementById( 'csme-test-img' );
 				return img ? img.getAttribute( 'crossorigin' ) : 'missing';
@@ -344,7 +369,7 @@ test.describe( 'Cross-Origin Isolation', () => {
 		}
 	} );
 
-	test( 'should add crossorigin to dynamic non-image media elements', async ( {
+	test( 'should add crossorigin to dynamic non-image media elements only under require-corp', async ( {
 		admin,
 		page,
 		browserName,
@@ -356,7 +381,6 @@ test.describe( 'Cross-Origin Isolation', () => {
 
 		await admin.createNewPost();
 
-		// Non-IMG elements get the attribute in both COEP modes.
 		await page.evaluate( () => {
 			const video = document.createElement( 'video' );
 			video.id = 'csme-test-video';
@@ -365,12 +389,26 @@ test.describe( 'Cross-Origin Isolation', () => {
 			document.body.appendChild( video );
 		} );
 
-		await page.waitForFunction( () => {
-			const video = document.getElementById( 'csme-test-video' );
-			return (
-				video && video.getAttribute( 'crossorigin' ) === 'anonymous'
-			);
-		} );
+		if ( browserName === 'webkit' ) {
+			await page.waitForFunction( () => {
+				const video = document.getElementById( 'csme-test-video' );
+				return (
+					video && video.getAttribute( 'crossorigin' ) === 'anonymous'
+				);
+			} );
+		} else {
+			/*
+			 * Under credentialless (Firefox) the media already loads without
+			 * credentials, and forcing CORS mode would break it on servers
+			 * without CORS headers.
+			 */
+			await waitForObserver( page );
+			const crossorigin = await page.evaluate( () => {
+				const video = document.getElementById( 'csme-test-video' );
+				return video ? video.getAttribute( 'crossorigin' ) : 'missing';
+			} );
+			expect( crossorigin ).toBeNull();
+		}
 	} );
 
 	test( 'should add credentialless attribute to iframes', async ( {
