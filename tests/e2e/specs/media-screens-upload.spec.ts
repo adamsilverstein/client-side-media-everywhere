@@ -84,5 +84,57 @@ test.describe( 'Client-side uploads on the media screens', () => {
 
 			expect( classicUploads ).toEqual( [] );
 		} );
+
+		test( `should warn before leaving ${ screen.name } mid-upload`, async ( {
+			admin,
+			page,
+		} ) => {
+			await admin.visitAdminPage( screen.path, screen.query );
+
+			// Hold the upload open so it is still in flight when the page unloads.
+			let markUploadStarted = () => {};
+			const uploadStarted = new Promise< void >( ( resolve ) => {
+				markUploadStarted = resolve;
+			} );
+			await page.route(
+				( url ) =>
+					/wp\/v2\/media/.test( decodeURIComponent( url.href ) ),
+				async ( route ) => {
+					if ( route.request().method() !== 'POST' ) {
+						await route.continue();
+						return;
+					}
+					markUploadStarted();
+				}
+			);
+
+			// Browsers only show the prompt on a page the user has interacted with.
+			await page.locator( '#wpbody-content h1' ).first().click();
+
+			await page
+				.locator( 'input[type="file"]' )
+				.first()
+				.setInputFiles( TEST_IMAGE_PATH );
+
+			await uploadStarted;
+
+			const dialogPromise = page.waitForEvent( 'dialog' );
+			// Navigate from a timer: Firefox holds the evaluate call open for
+			// as long as the prompt it triggers is showing.
+			await page.evaluate( () => {
+				setTimeout( () => {
+					window.location.href = 'index.php';
+				}, 0 );
+			} );
+
+			const dialog = await dialogPromise;
+			expect( dialog.type() ).toBe( 'beforeunload' );
+
+			// Staying keeps the upload screen and its in-flight upload.
+			await dialog.dismiss();
+			await expect( page ).toHaveURL( new RegExp( screen.path ) );
+
+			await page.unrouteAll( { behavior: 'ignoreErrors' } );
+		} );
 	}
 } );
